@@ -1,0 +1,111 @@
+{:directive-defs
+ {:access
+  {:locations #{:field-definition :field :object :schema}
+   :args {:role {:type :Access}}}}
+
+ :enums
+ {:Access
+  {:description "A users access level"
+   :values [{:enum-value :guest}
+            {:enum-value :loggedIn}
+            {:enum-value :admin}]}}
+
+ :objects
+ {:User
+  {:description "A user object"
+   :fields
+   {:id {:type (non-null Int)
+         :directives [{:directive-type :access
+                       :directive-args {:role :guest}}]}
+    :fullName {:type (non-null String)}
+    :userName {:type (non-null String)}
+    :password {:type (non-null String)
+               :directives [{:directive-type :access
+                             :directive-args {:role :admin}}]}
+    :email {:type (non-null String)}
+    :auth {:type (non-null (list :Auth))
+              :directives [{:directive-type :access
+                            :directive-args {:role :loggedIn}}]
+           }}}
+
+  :Auth
+  {:description "A users auth level"
+   :fields
+   {:id {:type (non-null Int)
+         :directives [{:directive-type :access
+                       :directive-args {:role :loggedIn}}]}
+    :loggedIn {:type (non-null Boolean)}}}
+
+  :Post
+  {:description "A text post by a user"
+   :fields
+   {:id {:type (non-null Int)}
+    :title {:type (non-null String)}
+    :body {:type (non-null String)}
+    :timeStamp {:type (non-null String)}
+    :user {:type (non-null (list :User))}}}
+
+  :Comment
+  {:description "a comment on a post"
+   :fields
+   {:id {:type (non-null Int)}
+    :body {:type (non-null String)}
+    :timeStamp {:type (non-null String)}
+    :post {:type (non-null (list :Post))}}}
+
+  :Query
+  {:fields
+   {:UserbyUsername
+    {:type :User
+     :desciption "Get a user by username"
+     :args
+     {:username {:type String}}}
+    :GetUser
+    {:type :User
+     :directives [{:directive-type :access
+                   :directive-args {:role :guest}}]
+     :description "Get a user by name"
+     :args
+     {:id {:type Int}}}
+    :GetAuth
+    {:type :Auth
+     :description "Auth by id"
+     :args
+     {:id {:type Int}}}
+    :GetAuthLevel
+    {:type :Auth
+     :description "Query an Auth Level based on token"
+     :args
+     {:token {:type String}}}
+    :GetPost
+    {:type :Post
+     :description "Get a post by ID"
+     :args
+     {:id {:type Int}}}
+    :GetComment
+    {:type :Comment
+     :description "Get a comment by ID"
+     :args
+     {:id {:type Int}}}
+    :User
+    {:type :User
+     :description "Get a user by token"
+     :args {}}}}
+
+  :Mutation
+  {:fields
+   {:CreatePost
+    {:type :Post
+     :description "add a post"
+     :args
+     {;; :postId {:type (non-null Int)}
+      :userId {:type (non-null Int)}
+      :title {:type (non-null String)}
+      :body {:type (non-null String)}}}
+
+    :LogIn
+    {:type String
+     :description "login and get a token"
+     :args
+     {:username {:type (non-null String)}
+      :password {:type (non-null String)}}}}}}}

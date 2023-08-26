@@ -1,0 +1,68 @@
+{:Users
+ [{:id "1"
+   :username "some"
+   :fullname "jeffrey something"
+   :email "godamnit@something.com"
+   :auth #{"abcd"}}
+  {:id "2"
+   :username "someone"
+   :fullname "bob something"
+   :email "bob@something.com"
+   :auth #{"abcd"}}
+  {:id "3"
+   :username "another"
+   :fullname "frank something"
+   :email "frank@something.com"
+   :auth #{"abcd"}}
+  {:id "4"
+   :username "more"
+   :fullname "familial something"
+   :email "fuck@something.com"
+   :auth #{"abde"}}]
+
+ :Auths
+ [{:token "abcd"
+   :authlevel "admin"
+   :authprovider "me"
+   :user #{"1"}}
+  {:token "abcd"
+   :authlevel "admin"
+   :authprovider "me"
+   :user #{"2"}}
+  {:token "abcd"
+   :authlevel "admin"
+   :authprovider "me"
+   :user #{"3"}}
+  {:token "abde"
+   :authlevel "admin"
+   :authprovider "me"
+   :user #{"4"}}]
+
+ :Posts
+ [{:id "0"
+   :title "why I am awesome"
+   :body "many reasons"
+   :timestamp "20230703"
+   :user #{"1"}}
+  {:id "1"
+   :title "more reasons why I am awesome"
+   :body "many more reasons"
+   :timestamp "20230703"
+   :user #{"1"}}
+  {:id "2"
+   :title "why user one sucks"
+   :body "many reasons"
+   :timestamp "20230703"
+   :user #{"2"}}]
+
+ :Comments
+ [{:id "0"
+   :body "this is stupid"
+   :timestamp "20230703"
+   :user #{3}
+   :post #{0}}
+  {:id "1"
+   :body "this is so so stupid"
+   :timesntamp "20230703"
+   :user #{4}
+   :post #{0}}]}

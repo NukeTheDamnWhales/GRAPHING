@@ -1,0 +1,10 @@
+{:unauthed
+ {:queries
+  {:GetUser
+   {:fields
+    {:id {:condition GetPost/id}
+     :fullName nil
+     :userName nil
+     :password {:condition GetPost/password}
+     :email {:condition GetPost/email}
+     :auth {:condition GetPost/auth}}}}}}
