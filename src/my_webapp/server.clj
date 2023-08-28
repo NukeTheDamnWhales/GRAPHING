@@ -22,7 +22,7 @@
    (default-interceptors compiled-schema app-context options nil))
   ([compiled-schema app-context options db]
    [ ;;lp/initialize-tracing-interceptor
-    auth/cookie-response-interceptor
+;;    auth/cookie-response-interceptor
     lp/json-response-interceptor
     lp/error-response-interceptor
     lp/body-data-interceptor

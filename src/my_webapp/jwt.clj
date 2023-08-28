@@ -75,4 +75,4 @@
     :leave (fn [context]
              (let [setcookie? (get-in context [:response :setcookie?])]
                (-> context
-                   (assoc-in [:response :headers "Set-Cookie"] "jwt=hithere"))))}))
+                   (assoc-in [:response :headers "Set-Cookie"] "jwt=hithere; Secure; HttpOnly;"))))}))

@@ -9,3 +9,9 @@ services:
     environment:
       POSTGRES_PASSWORD: supersecret
     # command: bash -c "~/setup-db.sh"
+
+  proxy:
+    build: nginx-proxy/
+    ports:
+      - 80:80
+      - 443:443
