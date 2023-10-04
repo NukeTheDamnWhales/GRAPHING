@@ -59,11 +59,25 @@
   (fn [_ _ auth]
     (db/find-auth-by-user db (:id auth))))
 
+(defn post-to-comment
+  [db]
+  (fn [_ args _]
+    (db/find-comment-by-post db (:post args))))
+
 (defn post-to-user
   [db]
   (fn [_ _ user]
     (db/find-user-by-post db (:user user))))
 
+(defn get-all-boards
+  [db]
+  (fn [_ _ _]
+    (db/get-all-boards db)))
+
+(defn posts-by-board
+  [db]
+  (fn [_ args _]
+    (db/get-posts-by-board db (:board args))))
 
 ;; THIS WILL WORK DO THIS
 (defn comment-to-post
@@ -102,6 +116,18 @@
         ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
         ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 
+(defn subscription-test
+  [db]
+  (fn [cx _ _]
+    (prn db)
+    (prn cx)))
+
+(defn streamer-map
+  [component]
+  (let [db (:db component)]
+    {:Subscription/Test (subscription-test db)}))
+
+
 (defn resolver-map
   [component]
   (let [db (:db component)]
@@ -110,6 +136,9 @@
      :Query/GetPost (post-by-id db)
      :Query/GetComment (comment-by-id db)
      :Query/GetAuth (auth-by-id db)
+     :Query/GetAllBoards (get-all-boards db)
+     :Query/PostsByBoard (posts-by-board db)
+     :Query/CommentsByPost (post-to-comment db)
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db)
      :Mutation/RefreshToken (refresh-token db)
@@ -123,6 +152,7 @@
       slurp
       edn/read-string
       (util/inject-resolvers (resolver-map component))
+      (util/inject-streamers (streamer-map component))
       schema/compile))
 
 (defrecord SchemaProvider [db schema]

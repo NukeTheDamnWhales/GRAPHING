@@ -19,7 +19,7 @@
                        :directive-args {:role :guest}}]}
     :fullName {:type (non-null String)
                :directives [{:directive-type :access
-                       :directive-args {:role :regular}}]}
+                             :directive-args {:role :regular}}]}
     :userName {:type (non-null String)}
     :password {:type (non-null String)
                :directives [{:directive-type :access
@@ -27,9 +27,8 @@
     :accessLevel {:type (non-null :Access)}
     :email {:type (non-null String)}
     :auth {:type (non-null (list :Auth))
-              :directives [{:directive-type :access
-                            :directive-args {:role :regular}}]
-           }}}
+           :directives [{:directive-type :access
+                         :directive-args {:role :regular}}]}}}
 
   :Auth
   {:description "A users auth level"
@@ -39,6 +38,12 @@
                        :directive-args {:role :regular}}]}
     :regular {:type (non-null Boolean)}}}
 
+  :Board
+  {:description "different forum boards"
+   :fields
+   {:id {:type (non-null Int)}
+    :title {:type (non-null String)}}}
+
   :Post
   {:description "A text post by a user"
    :fields
@@ -46,7 +51,8 @@
     :title {:type (non-null String)}
     :body {:type (non-null String)}
     :timeStamp {:type (non-null String)}
-    :user {:type (non-null (list :User))}}}
+    :user {:type (non-null (list :User))}
+    :board {:type (non-null (list :Board))}}}
 
   :Comment
   {:description "a comment on a post"
@@ -58,7 +64,23 @@
 
   :Query
   {:fields
-   {:UserbyUsername
+   {:GetAllBoards
+    {:type (list :Board)
+     :description "Return all boards"}
+
+    :PostsByBoard
+    {:type (list :Post)
+     :description "retun all posts from a forum board"
+     :args
+     {:board {:type (non-null Int)}}}
+
+    :CommentsByPost
+    {:type (list :Comment)
+     :description "find all comments for a post"
+     :args
+     {:post {:type (non-null Int)}}}
+
+    :UserbyUsername
     {:type :User
      :desciption "Get a user by username"
      :args
@@ -70,6 +92,7 @@
      :description "Get a user by name"
      :args
      {:id {:type Int}}}
+
     :GetAuth
     {:type :Auth
      :description "Auth by id"
@@ -115,4 +138,11 @@
      :description "login and get a token"
      :args
      {:username {:type (non-null String)}
-      :password {:type (non-null String)}}}}}}}
+      :password {:type (non-null String)}}}}}
+
+  :Subscription
+  {:fields
+   {:Test
+    {:type String
+     :description "test for websockets :("
+     }}}}}

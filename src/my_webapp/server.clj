@@ -31,7 +31,7 @@
     lp/status-conversion-interceptor
     lp/missing-query-interceptor
     (lp/query-parser-interceptor compiled-schema (:parsed-query-cache options))
-    lp/disallow-subscriptions-interceptor
+;;    lp/disallow-subscriptions-interceptor
     lp/prepare-query-interceptor
     (lp/inject-app-context-interceptor app-context)
     (auth/auth-interceptor db)

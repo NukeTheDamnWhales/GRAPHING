@@ -39,7 +39,8 @@
                              :body :body
                              :created_at :createdAt
                              :updated_at :updatedAt
-                             :user_id :user}))
+                             :user_id :user
+                             :board_id :board}))
 
 (defn- remap-comment
   [row-data]
@@ -48,6 +49,11 @@
                              :post :post
                              :created_at :createdAt
                              :updated_at :updatedAt}))
+
+(defn- remap-board
+  [row-data]
+  (set/rename-keys row-data {:board_id :id
+                             :title :title}))
 
 (defn create-post-for-user
   [component user title text]
@@ -58,8 +64,14 @@
 (defn find-post-by-comment
   [component post-id]
   (->> (jdbc/query component
-                   ["select post_id, title, body, user_id, created_at, updated_at from posts where post_id = ?" post-id])
+                   ["select post_id, title, body, user_id, board_id, created_at, updated_at from posts where post_id = ?" post-id])
        (map remap-post)))
+
+(defn find-comment-by-post
+  [component post-id]
+  (->> (jdbc/query component
+               ["select comment_id, body, post, created_at, updated_at from comments where post = ?" post-id])
+       (map remap-comment)))
 
 ;; Field Resolver Format below
 (defn find-auth-by-user
@@ -86,7 +98,7 @@
 (defn find-post-by-id
   [component post-id]
   (-> (jdbc/query component
-                  ["select post_id, title, body, user_id, created_at, updated_at from posts where post_id = ?" post-id])
+                  ["select post_id, title, body, user_id, board_id created_at, updated_at from posts where post_id = ?" post-id])
       first
       remap-post
       ))
@@ -113,6 +125,16 @@
       first
       remap-user
       ))
+
+(defn get-all-boards
+  [component]
+  (map remap-board (jdbc/query component
+              ["select * from boards"])))
+
+(defn get-posts-by-board
+  [component board-id]
+  (map remap-post (jdbc/query component
+               ["select * from posts where board_id = ?" board-id])))
 
 (defrecord MyWebappDb [^ComboPooledDataSource datasource]
 
