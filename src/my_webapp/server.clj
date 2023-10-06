@@ -59,7 +59,7 @@
         lp/enable-graphiql
         (lp/enable-subscriptions compiled-schema options))))
 
-(defrecord Server [schema-provider server]
+(defrecord Server [schema-provider server queue]
 
   component/Lifecycle
 

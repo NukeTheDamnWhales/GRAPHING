@@ -7,7 +7,8 @@
               [my-webapp.db :as db]
               [clojure.edn :as edn]
               [my-webapp.jwt :as auth]
-              [buddy.sign.jwt :as jwt]))
+              [buddy.sign.jwt :as jwt]
+              [clojure.core.async :as a]))
 
 ;; Updated ones here and onwards
 
@@ -103,34 +104,38 @@
       (auth/create-claim username db))))
 
 (defn login
-  [db]
+  [db queue]
   (fn [context args _]
     (let [{username :username
            password :password} args
           actualpass (:password (db/find-user-by-username db username))]
       (prn (:response context))
       (if (= password actualpass)
-        (auth/create-claim username db)
+        (do
+          (auth/create-claim username db)
+          (send (:queue queue) assoc :users username))
         "error"))))
 
         ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
         ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 
 (defn subscription-test
-  [db]
-  (fn [cx _ _]
-    (prn db)
-    (prn cx)))
+  [db queue]
+  (fn [x y z]
+    (send (:queue queue) assoc :users "test")
+    (-> @(:queue queue) z)))
 
 (defn streamer-map
   [component]
-  (let [db (:db component)]
-    {:Subscription/Test (subscription-test db)}))
+  (let [db (:db component)
+        queue (:queue component)]
+    {:Subscription/Test (subscription-test db queue)}))
 
 
 (defn resolver-map
   [component]
-  (let [db (:db component)]
+  (let [db (:db component)
+        queue (:queue component)]
     {:Query/GetUser (user-by-id db)
      :Query/UserbyUsername (user-by-username db)
      :Query/GetPost (post-by-id db)
@@ -140,7 +145,7 @@
      :Query/PostsByBoard (posts-by-board db)
      :Query/CommentsByPost (post-to-comment db)
      :Mutation/CreatePost (create-post db)
-     :Mutation/LogIn (login db)
+     :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db)
      :Comment/post (comment-to-post db)
      :User/auth (user-to-auth db)
@@ -155,7 +160,7 @@
       (util/inject-streamers (streamer-map component))
       schema/compile))
 
-(defrecord SchemaProvider [db schema]
+(defrecord SchemaProvider [db schema queue]
 
   component/Lifecycle
 
