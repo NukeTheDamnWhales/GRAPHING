@@ -120,7 +120,6 @@
 (defn subscription-test
   [queue]
   (fn [_ _ source-stream]
-    (prn @(:user-queue (:queue queue)))
     (let [out (chan 1)
           init-queue (-> @(:user-queue (:queue queue)) :users keys)]
       (if init-queue
@@ -128,7 +127,10 @@
         (-> (list "no one here !") source-stream))
       (sub (:streamer (:queue queue)) :user-listener out)
       (go-loop []
-        (-> (<! out) :data :users keys source-stream)
+        (let [to-push (-> (<! out) :data :users keys)]
+          (if to-push
+            (-> to-push source-stream)
+            (-> (list "no one here !") source-stream)))
         (recur))
       #(do
          (prn "Connection Closed")

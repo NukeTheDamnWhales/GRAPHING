@@ -1,23 +1,22 @@
 (ns my-webapp.queue
   (:require
     [com.stuartsierra.component :as component]
-    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub]]
+    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub go-loop]]
     [buddy.sign.jwt :as jwt]
     [my-webapp.jwt :as auth]))
 
-;; (defn check-queue-token [user-map]
-;;   (try (jwt/unsign (get user-map 1) auth/secret)
-;;        "pass"
-;;        (catch Exception e
-;;          (send userqueue update-in [:users] dissoc (get user-map 0))
-;;          "fail")))
+(defn check-queue-token [queue]
+  (let [current-queue (-> @queue :users)]
+    (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
+                   "pass"
+                   (catch Exception e
+                     (send queue update-in [:users] dissoc (get x 0))))) current-queue)))
 
-;; (defn user-queue-checker []
-;;   (async/go-loop []
-;;     (async/<! (async/timeout 1000))
-;;     (map check-queue-token (-> @userqueue :users))
-;;     (prn @userqueue)
-;;     (recur)))
+(defn user-queue-checker [queue]
+  (go-loop []
+    (<! (async/timeout 1000))
+    (check-queue-token queue)
+    (recur)))
 
 (defrecord UserQueue []
 
@@ -27,23 +26,25 @@
     (let [in (chan 1)
           streamer (pub in :online-users)
           user-queue (agent {:users {}})]
+
       (add-watch user-queue :user-queue (fn [_ _ _ n]
                                           (go (>! in {:online-users :user-listener :data n}))))
-      (assoc this :queue {:streamer streamer :in in :user-queue user-queue}))
-              ;; (async/go-loop []
-              ;;   (<! (async/timeout 1000))
-              ;;   (async/put! in "hi")
-              ;;   (recur))
-              ;; (async/go-loop []
-              ;;   (prn (<! in))
-              ;;   (recur))
-              ;;(assoc this :queue userqueue)
-    )
+      (go-loop []
+        (<! (async/timeout 1000))
+        (let [current-queue (-> @user-queue :users)]
+          (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
+                           "pass"
+                           (catch Exception e
+                             (send user-queue update-in [:users] dissoc (get x 0)))))
+               current-queue))
+        (recur))
+
+      (assoc this :queue {:streamer streamer :in in :user-queue user-queue})))
 
   (stop [this]
     (when-let [{in :in user-queue :user-queue} (:queue (:queue this))]
       (close! in)
       (remove-watch user-queue :user-queue)
       (shutdown-agents))
-    (prn (:queue this))
-    (assoc this :queue nil)))
+    (assoc this :queue nil)
+    (prn (:queue this))))

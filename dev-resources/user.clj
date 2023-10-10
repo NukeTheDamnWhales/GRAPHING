@@ -5,25 +5,35 @@
 ;;   [clojure.java.browse :refer [browse-url]]
    [clojure.walk :as walk]
    [my-webapp.system :as system]
+   [my-webapp.queue :refer :all]
    [clojure.core.async :refer [<!! >!! <! >! go]])
   (:import (clojure.lang IPersistentMap)))
+
+;;; queue tester
+;; (let [queue (:user-queue (:queue (:queue system)))]
+;; (map (fn [x] (check-queue-token x queue)) (-> @queue :users)))
+
+;; Add fake user/token
+;; (let [queue (:user-queue (:queue (:queue system)))]
+;;         (send queue update-in [:users] conj {:hi "tester"}))
+
 
 (defn simplify
   "Converts all ordered maps nested within the map into standard hash maps, and
    sequences into vectors, which makes for easier constants in the tests, and eliminates ordering problems."
   [m]
   (walk/postwalk
-    (fn [node]
-      (cond
-        (instance? IPersistentMap node)
-        (into {} node)
+   (fn [node]
+     (cond
+       (instance? IPersistentMap node)
+       (into {} node)
 
-        (seq? node)
-        (vec node)
+       (seq? node)
+       (vec node)
 
-        :else
-        node))
-    m))
+       :else
+       node))
+   m))
 
 (defonce system (system/new-system))
 
