@@ -191,3 +191,5 @@
   {:schema-provider (-> {}
                         map->SchemaProvider
                         (component/using [:db]))})
+
+;; Testing
