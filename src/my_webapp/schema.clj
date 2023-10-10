@@ -121,16 +121,18 @@
   [queue]
   (fn [_ _ source-stream]
     (prn @(:user-queue (:queue queue)))
-    (let [out (chan 1)]
-      (-> (-> @(:user-queue (:queue queue)) :users keys) source-stream)
+    (let [out (chan 1)
+          init-queue (-> @(:user-queue (:queue queue)) :users keys)]
+      (if init-queue
+        (-> init-queue source-stream)
+        (-> (list "no one here !") source-stream))
       (sub (:streamer (:queue queue)) :user-listener out)
       (go-loop []
         (-> (<! out) :data :users keys source-stream)
         (recur))
       #(do
          (prn "Connection Closed")
-         (unsub (:streamer (:queue queue)) :user-listener out)
-         ))))
+         (unsub (:streamer (:queue queue)) :user-listener out)))))
 
 (defn streamer-map
   [component]
