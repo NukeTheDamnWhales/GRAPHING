@@ -8,7 +8,7 @@
               [clojure.edn :as edn]
               [my-webapp.jwt :as auth]
               [buddy.sign.jwt :as jwt]
-              [clojure.core.async :as a :refer [go go-loop <! >! <!! >!!]]
+              [clojure.core.async :as a :refer [go go-loop <! >! <!! >!! chan sub pub close! unsub]]
               [my-webapp.queue :as q]))
 
 ;; Updated ones here and onwards
@@ -120,25 +120,17 @@
 (defn subscription-test
   [queue]
   (fn [_ _ source-stream]
-    (go-loop []
-      (-> (list (<! (:queue queue))) source-stream)
-      (recur))
-    ;; (let [{in :in out :out} queue]
-    ;;   (go (-> (<! in) source-stream)))
-    ;; (a/go
-    ;;   (a/<! q/tester))
-    ;; (a/go-loop []
-    ;;   (a/<! (a/timeout 1000))
-    ;;   (a/>! queue "hi")
-    ;;   ;; (-> (a/<! queue) source-stream)
-    ;;   ;; (-> (a/<! queue) source-stream)
-    ;;   (recur))
-    ;; watcher on the queue
-    ;; (-> @(:queue queue) :users keys source-stream)
-    ;; (do (-> @(:queue queue) :users keys source-stream)
-    ;;     (add-watch (:queue queue) :online-users
-    ;;                (fn [_ _ _ _] (-> @(:queue queue) :users keys source-stream))))
-    #(prn "Connection Closed")))
+    (prn @(:user-queue (:queue queue)))
+    (let [out (chan 1)]
+      (-> (-> @(:user-queue (:queue queue)) :users keys) source-stream)
+      (sub (:streamer (:queue queue)) :user-listener out)
+      (go-loop []
+        (-> (<! out) :data :users keys source-stream)
+        (recur))
+      #(do
+         (prn "Connection Closed")
+         (unsub (:streamer (:queue queue)) :user-listener out)
+         ))))
 
 (defn streamer-map
   [component]
@@ -191,5 +183,3 @@
   {:schema-provider (-> {}
                         map->SchemaProvider
                         (component/using [:db]))})
-
-;; Testing
