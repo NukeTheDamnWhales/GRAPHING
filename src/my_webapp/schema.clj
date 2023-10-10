@@ -98,38 +98,39 @@
       (db/create-post-for-user db user title text))))
 
 (defn refresh-token
-  [db]
+  [db queue]
   (fn [context _ _]
     (let [username (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))]
-      (auth/create-claim username db))))
+      (auth/create-claim username db queue))))
 
 (defn login
   [db queue]
-  (fn [context args _]
+  (fn [_ args _]
     (let [{username :username
            password :password} args
           actualpass (:password (db/find-user-by-username db username))]
-      (prn (:response context))
       (if (= password actualpass)
-        (do
-          (auth/create-claim username db)
-          (send (:queue queue) assoc :users username))
+        (auth/create-claim username db queue)
         "error"))))
 
         ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
         ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 
 (defn subscription-test
-  [db queue]
-  (fn [x y z]
-    (send (:queue queue) assoc :users "test")
-    (-> @(:queue queue) z)))
+  [queue]
+  (fn [_ _ source-stream]
+    ;; watcher on the queue
+    (-> @(:queue queue) :users keys source-stream)
+    ;; (do (-> @(:queue queue) :users keys source-stream)
+    ;;     (add-watch (:queue queue) :online-users
+    ;;                (fn [_ _ _ _] (-> @(:queue queue) :users keys source-stream))))
+    #(prn "Connection Closed")))
 
 (defn streamer-map
   [component]
   (let [db (:db component)
         queue (:queue component)]
-    {:Subscription/Test (subscription-test db queue)}))
+    {:Subscription/LoggedInUsers (subscription-test queue)}))
 
 
 (defn resolver-map
@@ -146,7 +147,7 @@
      :Query/CommentsByPost (post-to-comment db)
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db queue)
-     :Mutation/RefreshToken (refresh-token db)
+     :Mutation/RefreshToken (refresh-token db queue)
      :Comment/post (comment-to-post db)
      :User/auth (user-to-auth db)
      :Post/user (post-to-user db)}))

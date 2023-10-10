@@ -142,7 +142,7 @@
 
   :Subscription
   {:fields
-   {:Test
-    {:type String
-     :description "test for websockets :("
+   {:LoggedInUsers
+    {:type (list String)
+     :description "returns logged in users stored in queue"
      }}}}}

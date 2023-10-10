@@ -7,6 +7,7 @@
    [com.walmartlabs.lacinia.pedestal.internal :as internal]
    [my-webapp.db :as db]))
 
+(defonce token-time 10)
 (defonce secret "abc")
 
 (def access-level
@@ -63,8 +64,10 @@
                          (internal/message-as-errors "Only true pickle aficionados may access this field"))))))}))
 
 (defn create-claim
-  [username db]
-  (jwt/sign {:user username :access-level (:accessLevel (db/find-user-by-username db username)) :exp (time/plus (time/now) (time/minutes 10))} secret))
+  [username db queue]
+  (let [token (jwt/sign {:user username :access-level (:accessLevel (db/find-user-by-username db username)) :exp (time/plus (time/now) (time/seconds 30))} secret)]
+    (send (:queue queue) update-in [:users] conj {(keyword username) token})
+    token))
 
 
 (def cookie-response-interceptor
