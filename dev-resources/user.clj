@@ -4,7 +4,8 @@
    [com.walmartlabs.lacinia :as lacinia]
 ;;   [clojure.java.browse :refer [browse-url]]
    [clojure.walk :as walk]
-   [my-webapp.system :as system])
+   [my-webapp.system :as system]
+   [clojure.core.async :refer [<!! >!! <! >! go]])
   (:import (clojure.lang IPersistentMap)))
 
 (defn simplify

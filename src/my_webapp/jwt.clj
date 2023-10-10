@@ -66,7 +66,7 @@
 (defn create-claim
   [username db queue]
   (let [token (jwt/sign {:user username :access-level (:accessLevel (db/find-user-by-username db username)) :exp (time/plus (time/now) (time/seconds 30))} secret)]
-    (send (:queue queue) update-in [:users] conj {(keyword username) token})
+    ;; (send (:queue queue) update-in [:users] conj {(keyword username) token})
     token))
 
 

@@ -8,7 +8,8 @@
               [clojure.edn :as edn]
               [my-webapp.jwt :as auth]
               [buddy.sign.jwt :as jwt]
-              [clojure.core.async :as a]))
+              [clojure.core.async :as a :refer [go go-loop <! >! <!! >!!]]
+              [my-webapp.queue :as q]))
 
 ;; Updated ones here and onwards
 
@@ -119,8 +120,21 @@
 (defn subscription-test
   [queue]
   (fn [_ _ source-stream]
+    (go-loop []
+      (-> (list (<! (:queue queue))) source-stream)
+      (recur))
+    ;; (let [{in :in out :out} queue]
+    ;;   (go (-> (<! in) source-stream)))
+    ;; (a/go
+    ;;   (a/<! q/tester))
+    ;; (a/go-loop []
+    ;;   (a/<! (a/timeout 1000))
+    ;;   (a/>! queue "hi")
+    ;;   ;; (-> (a/<! queue) source-stream)
+    ;;   ;; (-> (a/<! queue) source-stream)
+    ;;   (recur))
     ;; watcher on the queue
-    (-> @(:queue queue) :users keys source-stream)
+    ;; (-> @(:queue queue) :users keys source-stream)
     ;; (do (-> @(:queue queue) :users keys source-stream)
     ;;     (add-watch (:queue queue) :online-users
     ;;                (fn [_ _ _ _] (-> @(:queue queue) :users keys source-stream))))
