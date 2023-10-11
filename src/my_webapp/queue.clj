@@ -7,10 +7,12 @@
 
 (defn check-queue-token [queue]
   (let [current-queue (-> @queue :users)]
-    (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
-                   "pass"
-                   (catch Exception e
-                     (send queue update-in [:users] dissoc (get x 0))))) current-queue)))
+          (into [] (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
+                                    "pass"
+                                    (catch Exception e
+                                      (send queue update-in [:users] dissoc (get x 0))
+                                      "fail"))))
+                        current-queue)))
 
 (defn user-queue-checker [queue]
   (go-loop []
@@ -31,12 +33,14 @@
                                           (go (>! in {:online-users :user-listener :data n}))))
       (go-loop []
         (<! (async/timeout 1000))
-        (let [current-queue (-> @user-queue :users)]
-          (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
-                           "pass"
-                           (catch Exception e
-                             (send user-queue update-in [:users] dissoc (get x 0)))))
-               current-queue))
+        (check-queue-token user-queue)
+        ;; (let [current-queue (-> @user-queue :users)]
+        ;;   (doall (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
+        ;;                          "pass"
+        ;;                          (catch Exception e
+        ;;                            (send user-queue update-in [:users] dissoc (get x 0))
+        ;;                            "fail")))
+        ;;             current-queue)))
         (recur))
 
       (assoc this :queue {:streamer streamer :in in :user-queue user-queue})))
