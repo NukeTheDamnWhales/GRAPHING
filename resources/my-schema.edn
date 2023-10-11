@@ -125,7 +125,6 @@
      :description "add a post"
      :args
      {;; :postId {:type (non-null Int)}
-      :userId {:type (non-null Int)}
       :title {:type (non-null String)}
       :body {:type (non-null String)}}}
 

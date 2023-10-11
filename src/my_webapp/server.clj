@@ -26,6 +26,7 @@
     lp/json-response-interceptor
     lp/error-response-interceptor
     lp/body-data-interceptor
+    auth/token-interceptor
     lp/graphql-data-interceptor
     ;;    permissions-check
     lp/status-conversion-interceptor

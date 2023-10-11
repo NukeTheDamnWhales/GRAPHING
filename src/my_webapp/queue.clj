@@ -1,7 +1,7 @@
 (ns my-webapp.queue
   (:require
     [com.stuartsierra.component :as component]
-    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub go-loop]]
+    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub go-loop alts!]]
     [buddy.sign.jwt :as jwt]
     [my-webapp.jwt :as auth]))
 
@@ -14,12 +14,6 @@
                                       "fail"))))
                         current-queue)))
 
-(defn user-queue-checker [queue]
-  (go-loop []
-    (<! (async/timeout 1000))
-    (check-queue-token queue)
-    (recur)))
-
 (defrecord UserQueue []
 
   component/Lifecycle
@@ -27,28 +21,37 @@
   (start [this]
     (let [in (chan 1)
           streamer (pub in :online-users)
-          user-queue (agent {:users {}})]
+          user-queue (agent {:users {}})
+          kill-channel (chan 1)]
 
       (add-watch user-queue :user-queue (fn [_ _ _ n]
                                           (go (>! in {:online-users :user-listener :data n}))))
       (go-loop []
-        (<! (async/timeout 1000))
-        (check-queue-token user-queue)
-        ;; (let [current-queue (-> @user-queue :users)]
-        ;;   (doall (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
-        ;;                          "pass"
-        ;;                          (catch Exception e
-        ;;                            (send user-queue update-in [:users] dissoc (get x 0))
-        ;;                            "fail")))
-        ;;             current-queue)))
-        (recur))
-
-      (assoc this :queue {:streamer streamer :in in :user-queue user-queue})))
+        (let [[n _] (alts!
+                     [(async/timeout 1000) kill-channel])]
+          (check-queue-token user-queue)
+          (if (= n "kill")
+            nil
+            (recur))))
+      (assoc this :queue {:streamer streamer :in in :user-queue user-queue :kill-channel kill-channel})))
 
   (stop [this]
-    (when-let [{in :in user-queue :user-queue} (:queue (:queue this))]
-      (close! in)
+    (prn this)
+    (prn "hi")
+    (when-let [{in :in user-queue :user-queue kill-channel :kill-channel} (:queue this)]
+      (shutdown-agents)
+      (prn "made it")
+      (>!! kill-channel "kill")
+      (prn "what??")
+      (prn)
+      (prn)
+      (prn user-queue)
+      (prn "made it here")
+      (close! kill-channel)
+      (prn kill-channel)
       (remove-watch user-queue :user-queue)
-      (shutdown-agents))
+      (close! in)
+      (close! kill-channel)
+      (prn (:queue this)))
     (assoc this :queue nil)
-    (prn (:queue this))))
+    (prn this)))

@@ -91,22 +91,22 @@
 (defn create-post
   ;; insecure
   [db]
-  (fn [_ args _]
+  (fn [context args _]
     (let [{;; postid :postId
-           user :userId
            title :title
-           text :body} args]
+           text :body} args
+          user (-> context :token :user-id)]
       (db/create-post-for-user db user title text))))
 
 (defn refresh-token
   [db queue]
   (fn [context _ _]
-    (let [username (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))]
+    (let [{username :user} (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
       (auth/create-claim username db queue))))
 
 (defn login
   [db queue]
-  (fn [_ args _]
+  (fn [context args _]
     (let [{username :username
            password :password} args
           actualpass (:password (db/find-user-by-username db username))]

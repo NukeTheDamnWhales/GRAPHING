@@ -18,9 +18,10 @@
 (defn token-verify
   [context]
   (if-let
-      [access (:access-level (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret))]
-      access
-      :guest))
+      [token (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)]
+    (do (assoc context :token token)
+      (:access-level token))
+    :guest))
 
 (defn auth-walk*
   [auth-map]
@@ -38,6 +39,17 @@
   (map #(-> %
             :directive-args
             :role) (auth-walk* auth-map)))
+
+(def token-interceptor
+  (interceptor
+   {:name ::token-inter
+    :enter (fn [context]
+             (let [token (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)
+                              (catch Exception e
+                                nil))]
+               (when token
+                 (assoc context :token token))
+               context))}))
 
 (defn auth-interceptor
   [db]
@@ -65,7 +77,12 @@
 
 (defn create-claim
   [username db queue]
-  (let [token (jwt/sign {:user username :access-level (:accessLevel (db/find-user-by-username db username)) :exp (time/plus (time/now) (time/seconds 30))} secret)]
+  (let [user-object (db/find-user-by-username db username)
+        {access-level :accessLevel userid :id} user-object
+        token (jwt/sign {:user username
+                         :access-level access-level
+                         :user-id userid
+                         :exp (time/plus (time/now) (time/seconds 30))} secret)]
     (send (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
     token))
 
