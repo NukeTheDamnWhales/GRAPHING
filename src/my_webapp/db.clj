@@ -21,14 +21,6 @@
                              :accesslevel :accessLevel
                              :email :email
                              :loggedin :loggedIn
-                             :auth :auth
-                             :created_at :createdAt
-                             :updated_at :updatedAt}))
-
-(defn- remap-auth
-  [row-data]
-  (set/rename-keys row-data {:auth_id :id
-                             :loggedin :loggedIn
                              :created_at :createdAt
                              :updated_at :updatedAt}))
 
@@ -55,10 +47,16 @@
   (set/rename-keys row-data {:board_id :id
                              :title :title}))
 
-(defn create-post-for-user
-  [component user title text]
+(defn create-user
+  [component username password]
   (jdbc/execute! component
-                 ["insert into posts (title, body, user_id) values (?, ?, ?)" title text user])
+                 ["insert into users (username, accesslevel, password, name) values (?, ?, ?, ?)" username "regular" password "jeff"])
+  nil)
+
+(defn create-post-for-user
+  [component user title text board]
+  (jdbc/execute! component
+                 ["insert into posts (title, body, user_id, board_id) values (?, ?, ?, ?)" title text user board])
   nil)
 
 (defn find-post-by-comment
@@ -74,26 +72,13 @@
        (map remap-comment)))
 
 ;; Field Resolver Format below
-(defn find-auth-by-user
-  [component auth-id]
-  (->> (jdbc/query component
-                   ["select auth_id, loggedin, created_at, updated_at from auths where auth_id = ?" auth-id])
-       (map remap-auth)))
 
 (defn find-user-by-post
   [component user-id]
   (->> (jdbc/query component
-               ["select user_id, name, username, password, accesslevel, email, auth, created_at, updated_at from users where user_id = ?" user-id])
+               ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
        (map remap-user)))
 
-
-(defn find-auth-by-id
-  [component auth-id]
-  (-> (jdbc/query component
-                  ["select auth_id, loggedin, created_at, updated_at from auths where auth_id = ?" auth-id])
-      first
-      remap-auth
-      ))
 
 (defn find-post-by-id
   [component post-id]
@@ -113,7 +98,7 @@
 (defn find-user-by-id
   [component user-id]
   (-> (jdbc/query component
-                  ["select user_id, name, username, password, accesslevel, email, loggedin, auth, created_at, updated_at from users where user_id = ?" user-id])
+                  ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
       first
       remap-user
       ))
@@ -121,7 +106,7 @@
 (defn find-user-by-username
   [component user-name]
   (-> (jdbc/query component
-                  ["select user_id, name, username, password, accesslevel, email, loggedin, auth, created_at, updated_at from users where username = ?" user-name])
+                  ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where username = ?" user-name])
       first
       remap-user
       ))

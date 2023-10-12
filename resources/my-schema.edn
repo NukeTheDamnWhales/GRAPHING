@@ -24,19 +24,7 @@
     :password {:type (non-null String)
                :directives [{:directive-type :access
                              :directive-args {:role :admin}}]}
-    :accessLevel {:type (non-null :Access)}
-    :email {:type (non-null String)}
-    :auth {:type (non-null (list :Auth))
-           :directives [{:directive-type :access
-                         :directive-args {:role :regular}}]}}}
-
-  :Auth
-  {:description "A users auth level"
-   :fields
-   {:id {:type (non-null Int)
-         :directives [{:directive-type :access
-                       :directive-args {:role :regular}}]}
-    :regular {:type (non-null Boolean)}}}
+    :accessLevel {:type (non-null :Access)}}}
 
   :Board
   {:description "different forum boards"
@@ -93,16 +81,6 @@
      :args
      {:id {:type Int}}}
 
-    :GetAuth
-    {:type :Auth
-     :description "Auth by id"
-     :args
-     {:id {:type Int}}}
-    :GetAuthLevel
-    {:type :Auth
-     :description "Query an Auth Level based on token"
-     :args
-     {:token {:type String}}}
     :GetPost
     {:type :Post
      :description "Get a post by ID"
@@ -121,12 +99,13 @@
   :Mutation
   {:fields
    {:CreatePost
-    {:type :Post
+    {:type String
      :description "add a post"
      :args
      {;; :postId {:type (non-null Int)}
       :title {:type (non-null String)}
-      :body {:type (non-null String)}}}
+      :body {:type (non-null String)}
+      :board {:type (non-null Int)}}}
 
     :RefreshToken
     {:type String
@@ -141,7 +120,14 @@
 
     :LogOut
     {:type String
-     :description "log out"}}}
+     :description "log out"}
+
+    :CreateUser
+    {:type String
+     :description "Create a new user"
+     :args
+     {:username {:type (non-null String)}
+      :password {:type (non-null String)}}}}}
 
   :Subscription
   {:fields

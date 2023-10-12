@@ -51,16 +51,6 @@
   (fn [_ args _]
     (db/find-comment-by-id db (:id args))))
 
-(defn auth-by-id
-  [db]
-  (fn [_ args _]
-    (db/find-auth-by-id db (:id args))))
-
-(defn user-to-auth
-  [db]
-  (fn [_ _ auth]
-    (db/find-auth-by-user db (:id auth))))
-
 (defn post-to-comment
   [db]
   (fn [_ args _]
@@ -94,14 +84,21 @@
   (fn [context args _]
     (let [{;; postid :postId
            title :title
-           text :body} args
-          user (-> context :token :user-id)]
-      (db/create-post-for-user db user title text))))
+           text :body
+           board :board} args
+          user (try (:user-id (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))
+                    (catch Exception e
+                      nil))]
+      (prn user title text board)
+      (if user
+        (db/create-post-for-user db user title text board)
+        "you are not logged in :("))))
 
 (defn refresh-token
   [db queue]
   (fn [context _ _]
-    (let [{username :user} (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
+    (let [{username :user}
+          (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
       (auth/create-claim username db queue))))
 
 (defn login
@@ -114,8 +111,17 @@
         (auth/create-claim username db queue)
         "error"))))
 
-        ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
-        ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
+(defn create-user
+  [db]
+  (fn [_ args _]
+    (let [{username :username
+           password :password} args]
+      (try (db/create-user db username password)
+           (catch Exception e
+             "Error")))))
+
+;; (update-in context [:response :headers] (conj headers "Set-Cookie"
+;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 (defn log-out
   [queue]
   (fn [context _ _]
@@ -158,7 +164,6 @@
      :Query/UserbyUsername (user-by-username db)
      :Query/GetPost (post-by-id db)
      :Query/GetComment (comment-by-id db)
-     :Query/GetAuth (auth-by-id db)
      :Query/GetAllBoards (get-all-boards db)
      :Query/PostsByBoard (posts-by-board db)
      :Query/CommentsByPost (post-to-comment db)
@@ -166,8 +171,8 @@
      :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db queue)
      :Mutation/LogOut (log-out queue)
+     :Mutation/CreateUser (create-user db)
      :Comment/post (comment-to-post db)
-     :User/auth (user-to-auth db)
      :Post/user (post-to-user db)}))
 
 (defn load-schema
@@ -177,7 +182,9 @@
       edn/read-string
       (util/inject-resolvers (resolver-map component))
       (util/inject-streamers (streamer-map component))
-      schema/compile))
+      ;; (schema/compile {:enable-introspection? false})
+      schema/compile
+      ))
 
 (defrecord SchemaProvider [db schema queue]
 

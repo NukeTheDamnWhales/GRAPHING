@@ -49,9 +49,7 @@
                                 nil))]
                (if token
                  (assoc context :token token)
-                 context)))
-    :leave (fn [context]
-             context)}))
+                 context)))}))
 
 (defn auth-interceptor
   [db]
