@@ -47,9 +47,11 @@
              (let [token (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)
                               (catch Exception e
                                 nil))]
-               (when token
-                 (assoc context :token token))
-               context))}))
+               (if token
+                 (assoc context :token token)
+                 context)))
+    :leave (fn [context]
+             context)}))
 
 (defn auth-interceptor
   [db]
@@ -82,7 +84,7 @@
         token (jwt/sign {:user username
                          :access-level access-level
                          :user-id userid
-                         :exp (time/plus (time/now) (time/seconds 30))} secret)]
+                         :exp (time/plus (time/now) (time/minutes 8))} secret)]
     (send (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
     token))
 

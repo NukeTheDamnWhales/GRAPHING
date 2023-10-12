@@ -137,7 +137,11 @@
      :description "login and get a token"
      :args
      {:username {:type (non-null String)}
-      :password {:type (non-null String)}}}}}
+      :password {:type (non-null String)}}}
+
+    :LogOut
+    {:type String
+     :description "log out"}}}
 
   :Subscription
   {:fields

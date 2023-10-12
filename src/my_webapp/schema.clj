@@ -116,6 +116,14 @@
 
         ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
         ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
+(defn log-out
+  [queue]
+  (fn [context _ _]
+    (let [user (-> context :token :user)
+          {username :user} (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
+      (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil))
+    "Logged Out"))
+
 
 (defn subscription-test
   [queue]
@@ -138,8 +146,7 @@
 
 (defn streamer-map
   [component]
-  (let [db (:db component)
-        queue (:queue component)]
+  (let [queue (:queue component)]
     {:Subscription/LoggedInUsers (subscription-test queue)}))
 
 
@@ -158,6 +165,7 @@
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db queue)
+     :Mutation/LogOut (log-out queue)
      :Comment/post (comment-to-post db)
      :User/auth (user-to-auth db)
      :Post/user (post-to-user db)}))

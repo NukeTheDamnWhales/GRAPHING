@@ -1,7 +1,7 @@
 (ns my-webapp.queue
   (:require
     [com.stuartsierra.component :as component]
-    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub go-loop alts!]]
+    [clojure.core.async :as async :refer [>! <! >!! <!! chan go close! sub pub go-loop alts! put!]]
     [buddy.sign.jwt :as jwt]
     [my-webapp.jwt :as auth]))
 
@@ -14,6 +14,10 @@
                                       "fail"))))
                         current-queue)))
 
+;; (defn queue-checker [queue kill]
+;;   (when (go (= "kill" (alts! [async/timeout 1000] kill)))))
+
+
 (defrecord UserQueue []
 
   component/Lifecycle
@@ -25,33 +29,23 @@
           kill-channel (chan 1)]
 
       (add-watch user-queue :user-queue (fn [_ _ _ n]
-                                          (go (>! in {:online-users :user-listener :data n}))))
+                                          (put! in {:online-users :user-listener :data n})))
       (go-loop []
+        ;;(prn (. System (nanoTime)))
         (let [[n _] (alts!
                      [(async/timeout 1000) kill-channel])]
           (check-queue-token user-queue)
           (if (= n "kill")
             nil
             (recur))))
+
       (assoc this :queue {:streamer streamer :in in :user-queue user-queue :kill-channel kill-channel})))
 
   (stop [this]
-    (prn this)
-    (prn "hi")
     (when-let [{in :in user-queue :user-queue kill-channel :kill-channel} (:queue this)]
-      (shutdown-agents)
-      (prn "made it")
       (>!! kill-channel "kill")
-      (prn "what??")
-      (prn)
-      (prn)
-      (prn user-queue)
-      (prn "made it here")
       (close! kill-channel)
-      (prn kill-channel)
       (remove-watch user-queue :user-queue)
       (close! in)
-      (close! kill-channel)
-      (prn (:queue this)))
-    (assoc this :queue nil)
-    (prn this)))
+      (send user-queue assoc-in [:users] {}))
+    (assoc this :queue nil)))
