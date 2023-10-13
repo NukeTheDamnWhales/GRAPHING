@@ -89,26 +89,31 @@
           user (try (:user-id (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))
                     (catch Exception e
                       nil))]
-      (prn user title text board)
       (if user
         (db/create-post-for-user db user title text board)
-        "you are not logged in :("))))
+        "error"))))
 
 (defn refresh-token
   [db queue]
   (fn [context _ _]
-    (let [{username :user}
-          (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
-      (auth/create-claim username db queue))))
+    (try (auth/create-claim (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))
+                        db queue)
+         (catch Exception e
+           "error"))))
 
 (defn login
   [db queue]
   (fn [context args _]
     (let [{username :username
            password :password} args
-          actualpass (:password (db/find-user-by-username db username))]
+          actualpass (:password (db/find-user-by-username db username))
+          existing (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                        (catch Exception e
+                          nil))]
       (if (= password actualpass)
-        (auth/create-claim username db queue)
+        (do (when existing
+              (send (:user-queue (:queue queue)) assoc-in [:users (keyword (:user existing))] nil))
+            (auth/create-claim username db queue))
         "error"))))
 
 (defn create-user
@@ -126,9 +131,13 @@
   [queue]
   (fn [context _ _]
     (let [user (-> context :token :user)
-          {username :user} (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")]
-      (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil))
-    "Logged Out"))
+          {username :user} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                                (catch Exception e
+                                  {:user nil}))]
+      (if username
+        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil)
+            "Logged Out")
+        "Not logged in"))))
 
 
 (defn subscription-test
