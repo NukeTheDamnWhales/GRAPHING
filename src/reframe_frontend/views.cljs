@@ -77,8 +77,8 @@
 (defn single-board-panel []
   (let [board (re-frame/subscribe [::subs/current-board])
         board-id (re-frame/subscribe [::subs/current-board-id])]
-    [:div (make-link-list :post @board)
-     [:a {:href (routes/url-for :create-post :id @board-id)} "create post"]
+    [:div.post-panel (make-link-list :post @board)
+     [:a.create-user-link {:href (routes/url-for :create-post :id @board-id)} "create post"]
      ]))
 
 (defn post-panel []
@@ -107,8 +107,9 @@
 (defn users-online []
   (re-frame/dispatch graphql/OnlineUsers)
   (fn []
-    (let [users (re-frame/subscribe [::subs/logged-in-users])]
-      [:div (str @users)])))
+    (let [users (re-frame/subscribe [::subs/logged-in-users])
+          user-list (:LoggedInUsers @users)]
+      [:header.logged-in "currently online:" [:div (str user-list)]])))
 
 ;; main
 
