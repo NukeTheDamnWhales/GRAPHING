@@ -82,7 +82,7 @@
         token (jwt/sign {:user username
                          :access-level access-level
                          :user-id userid
-                         :exp (time/plus (time/now) (time/minutes 6))} secret)]
+                         :exp (time/plus (time/now) (time/seconds 6))} secret)]
     (send (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
     token))
 

@@ -135,7 +135,7 @@
      (if (.getItem (.-localStorage js/window) "Authorization")
        (re-frame/dispatch graphql/RefreshToken)
        nil))
-   (* 4 60 1000))
+   (* 8 1000))
   (re-frame/dispatch [::events/reload-auth])
   (fn []
     (let [active-panel (re-frame/subscribe [::subs/active-panel])

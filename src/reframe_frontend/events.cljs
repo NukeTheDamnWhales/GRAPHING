@@ -39,8 +39,11 @@
  (fn [db {:keys [response]}]
    (let [{:keys [data errors]} response
          jwt (first (vals data))]
-     (if (= (:LogIn data) "error")
-       db
+     (prn data)
+     (if (or errors (= (:RefreshToken data) "error"))
+       (do
+         (.clear (.-localStorage js/window))
+         (dissoc db :authorization))
        (do
          (.setItem (.-localStorage js/window) "Authorization" jwt)
          (assoc db :authorization jwt))))))
