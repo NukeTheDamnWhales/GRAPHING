@@ -5,7 +5,9 @@
    [reagent.dom :as rdom]
    [clojure.edn :as edn]
    [reframe-frontend.routes :as routes]
-   [reframe-frontend.views :as views]))
+   [reframe-frontend.views :as views]
+   [reframe-frontend.flagencoding :as flag]
+   ))
 
 
 (def host {:http "http://192.168.2.12/api"

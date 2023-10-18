@@ -61,6 +61,11 @@
   (fn [_ _ user]
     (db/find-user-by-post db (:user user))))
 
+(defn comment-to-user
+  [db]
+  (fn [_ _ user]
+    (db/find-user-by-comment db (:user user))))
+
 (defn get-all-boards
   [db]
   (fn [_ _ _]
@@ -139,8 +144,12 @@
             "Logged Out")
         "Not logged in"))))
 
+(defn super-subscription
+  []
+  (fn [_ _ source-stream]
+    (-> "hi!" source-stream)))
 
-(defn subscription-test
+(defn online-users
   [queue]
   (fn [_ _ source-stream]
     (let [out (chan 1)
@@ -162,7 +171,9 @@
 (defn streamer-map
   [component]
   (let [queue (:queue component)]
-    {:Subscription/LoggedInUsers (subscription-test queue)}))
+    {:Subscription/LoggedInUsers (online-users queue)
+     :Subscription/TheGodlyPickle (super-subscription)
+     }))
 
 
 (defn resolver-map
@@ -182,7 +193,10 @@
      :Mutation/LogOut (log-out queue)
      :Mutation/CreateUser (create-user db)
      :Comment/post (comment-to-post db)
-     :Post/user (post-to-user db)}))
+     :Post/user (post-to-user db)
+     :Post/comment (post-to-comment db)
+     :Comment/user (comment-to-user db)
+     }))
 
 (defn load-schema
   [component]

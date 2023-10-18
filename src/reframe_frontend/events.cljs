@@ -39,7 +39,6 @@
  (fn [db {:keys [response]}]
    (let [{:keys [data errors]} response
          jwt (first (vals data))]
-     (prn data)
      (if (or errors (= (:RefreshToken data) "error"))
        (do
          (.clear (.-localStorage js/window))

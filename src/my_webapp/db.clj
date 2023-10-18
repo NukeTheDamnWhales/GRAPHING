@@ -38,7 +38,8 @@
   [row-data]
   (set/rename-keys row-data {:comment_id :id
                              :body :body
-                             :post :post
+                             :post_id :post
+                             :user_id :user
                              :created_at :createdAt
                              :updated_at :updatedAt}))
 
@@ -68,7 +69,7 @@
 (defn find-comment-by-post
   [component post-id]
   (->> (jdbc/query component
-               ["select comment_id, body, post, created_at, updated_at from comments where post = ?" post-id])
+                   ["select comment_id, body, user_id, post_id, created_at, updated_at from comments where post_id = ?" post-id])
        (map remap-comment)))
 
 ;; Field Resolver Format below
@@ -77,6 +78,12 @@
   [component user-id]
   (->> (jdbc/query component
                ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
+       (map remap-user)))
+
+(defn find-user-by-comment
+  [component user-id]
+  (->> (jdbc/query component
+                   ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
        (map remap-user)))
 
 
@@ -91,7 +98,7 @@
 (defn find-comment-by-id
   [component comment-id]
   (-> (jdbc/query component
-                  ["select comment_id, body, post, created_at, updated_at from comments where comment_id = ?" comment-id])
+                  ["select comment_id, body, post_id, user_id, created_at, updated_at from comments where comment_id = ?" comment-id])
       first
       remap-comment))
 

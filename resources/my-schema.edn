@@ -40,7 +40,8 @@
     :body {:type (non-null String)}
     :timeStamp {:type (non-null String)}
     :user {:type (non-null (list :User))}
-    :board {:type (non-null (list :Board))}}}
+    :board {:type (non-null (list :Board))}
+    :comments {:type (non-null (list :Comment))}}}
 
   :Comment
   {:description "a comment on a post"
@@ -48,6 +49,7 @@
    {:id {:type (non-null Int)}
     :body {:type (non-null String)}
     :timeStamp {:type (non-null String)}
+    :user {:type (non-null (list :User))}
     :post {:type (non-null (list :Post))}}}
 
   :Query
@@ -73,6 +75,7 @@
      :desciption "Get a user by username"
      :args
      {:username {:type String}}}
+
     :GetUser
     {:type :User
      :directives [{:directive-type :access
@@ -86,11 +89,13 @@
      :description "Get a post by ID"
      :args
      {:id {:type Int}}}
+
     :GetComment
     {:type :Comment
      :description "Get a comment by ID"
      :args
      {:id {:type Int}}}
+
     :User
     {:type :User
      :description "Get a user by token"
@@ -134,4 +139,10 @@
    {:LoggedInUsers
     {:type (list String)
      :description "returns logged in users stored in queue"
-     }}}}}
+     }
+
+    :TheGodlyPickle
+    {:type String
+     :description "uhh"}
+    }
+   }}}

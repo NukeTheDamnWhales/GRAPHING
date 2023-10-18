@@ -113,6 +113,7 @@
 
 ;; main
 
+
 (defn- panels [panel-name]
   (case panel-name
     :home-panel [home-panel]
@@ -124,18 +125,23 @@
     :logout-panel [about-panel]
     :create-post-panel [create-post-panel]
     :create-user-panel [create-user-panel]
-    [:div "404 not found and what not :'-( single page routing is hard"]))
+    [:div "You are horribly horribly lost 🥲"]))
 
 (defn show-panel [panel-name]
   [panels panel-name])
 
 (defn main-panel []
+  ;; Testing zone
+  (re-frame/dispatch (graphql/CommentsByPost 0))
+  (re-frame/dispatch graphql/TheGodlyPickle)
+
+  ;; -----------
   (js/setInterval
    (fn []
      (if (.getItem (.-localStorage js/window) "Authorization")
        (re-frame/dispatch graphql/RefreshToken)
        nil))
-   (* 8 1000))
+   (* 2 60 1000))
   (re-frame/dispatch [::events/reload-auth])
   (fn []
     (let [active-panel (re-frame/subscribe [::subs/active-panel])

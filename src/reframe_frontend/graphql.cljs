@@ -69,3 +69,19 @@
     :query "($username: String $password: String) {CreateUser(username: $username password: $password)}"
     :variables {:username x :password y}
     :callback [::events/do-nothing]}])
+
+(def TheGodlyPickle
+  [::re-graph/subscribe
+   {:instance-id :b
+    :id :TheGodlyPickle
+    :query "{TheGodlyPickle}"
+    :callback [::events/do-nothing]}])
+
+(defn CommentsByPost
+  [x]
+  [::re-graph/query
+   {:instance-id :a
+    :id :CommentsByPost
+    :query "($post: Int) {CommentsByPost(post: $post) {body user {userName}}}"
+    :variables {:post x}
+    :callback [::events/do-nothing]}])
