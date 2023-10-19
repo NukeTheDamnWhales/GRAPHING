@@ -65,7 +65,6 @@ create table comments (
   body text not null,
   post_id int references posts(post_id),
   user_id int references users(user_id),
-  # comment_id set referencs comments(comment_id),
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp);
 

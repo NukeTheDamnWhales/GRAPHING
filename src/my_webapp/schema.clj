@@ -19,16 +19,27 @@
     ;; (prn (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")))
     (db/find-user-by-username db (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")))))
 
+(defn user-by-token
+  [db]
+  (fn [context _ _]
+    (let [auth (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                    (catch Exception e
+                      "error"))
+          username (:user auth)]
+      (if username
+        (schema/tag-with-type (db/find-user-by-username db username) :User)
+        (schema/tag-with-type {:message "error"} :NotFoundAcceptableNull)))))
+
 (defn auth-walk*
   [auth-map]
   (flatten (map (fn [x] (if (:selections x)
-                          (cons (-> x
-                                    :field-definition
-                                    :directives)
-                                (auth-walk* (:selections x)))
-                          (-> x
-                              :field-definition
-                              :directives))) auth-map)))
+                         (cons (-> x
+                                   :field-definition
+                                   :directives)
+                               (auth-walk* (:selections x)))
+                         (-> x
+                             :field-definition
+                             :directives))) auth-map)))
 
 (defn auth-walk
   [auth-map]
@@ -53,8 +64,8 @@
 
 (defn post-to-comment
   [db]
-  (fn [_ args _]
-    (db/find-comment-by-post db (:post args))))
+  (fn [_ _ post_id]
+    (db/find-comment-by-post db (:id post_id))))
 
 (defn post-to-user
   [db]
@@ -181,12 +192,13 @@
   (let [db (:db component)
         queue (:queue component)]
     {:Query/GetUser (user-by-id db)
-     :Query/UserbyUsername (user-by-username db)
+     :Query/UserByUsername (user-by-username db)
      :Query/GetPost (post-by-id db)
      :Query/GetComment (comment-by-id db)
      :Query/GetAllBoards (get-all-boards db)
      :Query/PostsByBoard (posts-by-board db)
      :Query/CommentsByPost (post-to-comment db)
+     :Query/UserByToken (user-by-token db)
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db queue)
@@ -194,7 +206,7 @@
      :Mutation/CreateUser (create-user db)
      :Comment/post (comment-to-post db)
      :Post/user (post-to-user db)
-     :Post/comment (post-to-comment db)
+     :Post/comments (post-to-comment db)
      :Comment/user (comment-to-user db)
      }))
 
@@ -205,7 +217,7 @@
       edn/read-string
       (util/inject-resolvers (resolver-map component))
       (util/inject-streamers (streamer-map component))
-      ;; (schema/compile {:enable-introspection? false})
+      (schema/compile {:enable-introspection? false})
       schema/compile
       ))
 

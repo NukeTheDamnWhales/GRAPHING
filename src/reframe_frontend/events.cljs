@@ -19,6 +19,7 @@
  [re-frame/unwrap]
  (fn [db {:keys [response]}]
    (let [{:keys [data errors]} response]
+     (prn data)
      (assoc db :current-board data))))
 
 (re-frame/reg-event-db
@@ -87,3 +88,10 @@
  ::create-user
  (fn [db [_ x y]]
    (assoc-in db [:create-user x] y)))
+
+(re-frame/reg-event-db
+ ::user-info
+ [re-frame/unwrap]
+ (fn [db {:keys [response]}]
+   (let [{:keys [data errors]} response]
+     (assoc db :user-info data))))

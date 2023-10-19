@@ -56,3 +56,8 @@
  ::create-user-form
  (fn [db _]
    (:create-user db)))
+
+(re-frame/reg-sub
+ ::user-info
+ (fn [db _]
+   (:user-info db)))

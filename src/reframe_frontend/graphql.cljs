@@ -11,11 +11,18 @@
     :query "{GetAllBoards {title id}}"
     :callback [::events/get-gql-boards]}])
 
+(def UserByToken
+  [::re-graph/query
+   {:instance-id :a
+    :id :UserByToken
+    :query "{UserByToken {... on User {userName accessLevel fullName id} ... on NotFoundAcceptableNull {message}}}"
+    :callback [::events/user-info]}])
+
 (defn PostsByBoard [x]
   [::re-graph/query
    {:instance-id :a
     :id :PostsByBoard
-    :query "($board: Int) {PostsByBoard(board: $board) {title id}}"
+    :query "($board: Int) {PostsByBoard(board: $board) {title id comments {id} user {userName}}}"
     :variables {:board (js/Number x)}
     :callback [::events/get-gql-board]}])
 
@@ -75,13 +82,4 @@
    {:instance-id :b
     :id :TheGodlyPickle
     :query "{TheGodlyPickle}"
-    :callback [::events/do-nothing]}])
-
-(defn CommentsByPost
-  [x]
-  [::re-graph/query
-   {:instance-id :a
-    :id :CommentsByPost
-    :query "($post: Int) {CommentsByPost(post: $post) {body user {userName}}}"
-    :variables {:post x}
     :callback [::events/do-nothing]}])

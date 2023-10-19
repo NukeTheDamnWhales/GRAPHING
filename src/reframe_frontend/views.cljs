@@ -11,14 +11,16 @@
   [:div (map (fn [x]
                [:div
                 {:key (str (:id x))}
-                [:a {:href (routes/url-for first-url-part :id (:id x))} (str (:title x))]])
+                [:a {:href (routes/url-for first-url-part :id (:id x))} (str (:title x))]
+                (when (= first-url-part :post)
+                  [:p (str "| Author: " (:userName (first (:user x))) " | Comments: " (count (:comments x)) " |")])])
              elements)])
 
 (defn home-panel []
   (let [login-or-logout (re-frame/subscribe [::subs/auth-sub])]
     [:div.home-panel
      [:header.home-header "PICKLES"]
-     [:a {:href (routes/url-for :about)} "About"]
+     [:a {:href (routes/url-for :user)} "User"]
      [:a {:href (routes/url-for :boards)} "Boards"]
      [:a {:href (if @login-or-logout
                   (routes/url-for :logout :logout-action "logout")
@@ -26,6 +28,21 @@
       (if @login-or-logout "Logout" "Login")]]))
 ;; about
 
+(defn user-panel []
+  (let [userbytoken (re-frame/subscribe [::subs/user-info])
+        userinfo (:UserByToken @userbytoken)]
+    [:div.user-panel
+     [:table
+      [:tr
+       [:th "Username"]
+       [:th "Full Name"]
+       [:th "User Id"]
+       [:th "User Access"]]
+      [:tr
+       [:td (:userName userinfo)]
+       [:td (:fullName userinfo)]
+       [:td (:id userinfo)]
+       [:td (:accessLevel userinfo)]]]]))
 
 (defn about-panel []
   [:div "This is the About Page."
@@ -125,6 +142,7 @@
     :logout-panel [about-panel]
     :create-post-panel [create-post-panel]
     :create-user-panel [create-user-panel]
+    :user-panel [user-panel]
     [:div "You are horribly horribly lost 🥲"]))
 
 (defn show-panel [panel-name]
@@ -132,9 +150,7 @@
 
 (defn main-panel []
   ;; Testing zone
-  (re-frame/dispatch (graphql/CommentsByPost 0))
-  (re-frame/dispatch graphql/TheGodlyPickle)
-
+  ;; (re-frame/dispatch graphql/TheGodlyPickle)
   ;; -----------
   (js/setInterval
    (fn []

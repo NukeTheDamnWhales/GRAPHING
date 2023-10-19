@@ -10,8 +10,18 @@
             {:enum-value :regular}
             {:enum-value :admin}]}}
 
+ :unions
+ {:NotFoundAcceptableNullUNION
+  {:members [:User :NotFoundAcceptableNull]}}
+
  :objects
- {:User
+ {:NotFoundAcceptableNull
+  {:description "Used when we need a wrapped return object with error
+will be used with context fields like a token"
+   :fields
+   {:message {:type String}}}
+
+  :User
   {:description "A user object"
    :fields
    {:id {:type (non-null Int)
@@ -70,11 +80,15 @@
      :args
      {:post {:type (non-null Int)}}}
 
-    :UserbyUsername
+    :UserByUsername
     {:type :User
      :desciption "Get a user by username"
      :args
      {:username {:type String}}}
+
+    :UserByToken
+    {:type :NotFoundAcceptableNullUNION
+     :description "Get a user by token"}
 
     :GetUser
     {:type :User
@@ -138,11 +152,8 @@
   {:fields
    {:LoggedInUsers
     {:type (list String)
-     :description "returns logged in users stored in queue"
-     }
+     :description "returns logged in users stored in queue"}
 
     :TheGodlyPickle
     {:type String
-     :description "uhh"}
-    }
-   }}}
+     :description "uhh"}}}}}

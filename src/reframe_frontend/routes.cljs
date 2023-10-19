@@ -20,6 +20,7 @@
               "/"
               (leaf "" :home)
               (leaf "about" :about)
+              (leaf "user" :user)
               (branch "boards"
                       (leaf "" :boards)
                       (branch "/" (param :id)
@@ -51,6 +52,8 @@
       (re-frame/dispatch (graphql/GetPost (:id (:route-params matched-route))))
       :logout-panel
       (re-frame/dispatch graphql/LogOut)
+      :user-panel
+      (re-frame/dispatch graphql/UserByToken)
       nil)))
 
 (defn app-routes []
