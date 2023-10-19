@@ -72,12 +72,18 @@
                    ["select comment_id, body, user_id, post_id, created_at, updated_at from comments where post_id = ?" post-id])
        (map remap-comment)))
 
+
+(defn create-comment
+  [component body post user parent_id]
+  (jdbc/execute! component
+                 ["insert into comments (user_id, body, post_id, parent_id) values (?, ?, ?, ?)" user body post parent_id])
+  nil)
 ;; Field Resolver Format below
 
 (defn find-user-by-post
   [component user-id]
   (->> (jdbc/query component
-               ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
+                   ["select user_id, name, username, password, accesslevel, created_at, updated_at from users where user_id = ?" user-id])
        (map remap-user)))
 
 (defn find-user-by-comment

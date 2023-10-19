@@ -141,6 +141,17 @@
            (catch Exception e
              "Error")))))
 
+(defn create-comment
+  [db]
+  (fn [context args _]
+    (let [{id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                          (catch Exception e
+                            {:user-id nil}))
+          {:keys [body post parent]} args]
+      (if id
+        (db/create-comment db body post id)
+        "error"))))
+
 ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
 ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 (defn log-out
@@ -204,6 +215,7 @@
      :Mutation/RefreshToken (refresh-token db queue)
      :Mutation/LogOut (log-out queue)
      :Mutation/CreateUser (create-user db)
+     :Mutation/CreateComment (create-comment db)
      :Comment/post (comment-to-post db)
      :Post/user (post-to-user db)
      :Post/comments (post-to-comment db)
@@ -212,14 +224,16 @@
 
 (defn load-schema
   [component]
-  (-> (io/resource "my-schema.edn")
-      slurp
-      edn/read-string
-      (util/inject-resolvers (resolver-map component))
-      (util/inject-streamers (streamer-map component))
-      (schema/compile {:enable-introspection? false})
-      schema/compile
-      ))
+  (let [uncompiled (-> (io/resource "my-schema.edn")
+                       slurp
+                       edn/read-string
+                       (util/inject-resolvers (resolver-map component))
+                       (util/inject-streamers (streamer-map component))
+             ;; (schema/compile {:enable-introspection? false})
+                       schema/compile
+                       )]
+    ;; {:normal (schema/compile uncompiled {:enable-introspection? false}) "ws" (schema/compile uncompiled)}
+    uncompiled))
 
 (defrecord SchemaProvider [db schema queue]
 

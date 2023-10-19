@@ -61,3 +61,13 @@
  ::user-info
  (fn [db _]
    (:user-info db)))
+
+(re-frame/reg-sub
+ ::create-comment
+ (fn [db _]
+   (:create-comment db)))
+
+(re-frame/reg-sub
+ ::active-reply
+ (fn [db _]
+   (:active-reply db)))

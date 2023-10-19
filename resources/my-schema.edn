@@ -146,7 +146,15 @@ will be used with context fields like a token"
      :description "Create a new user"
      :args
      {:username {:type (non-null String)}
-      :password {:type (non-null String)}}}}}
+      :password {:type (non-null String)}}}
+
+    :CreateComment
+    {:type :Comment
+     :description "Create a new comment automatically gets User from token"
+     :args
+     {:body {:type (non-null String)}
+      :post {:type (non-null Int)}
+      :comment {:type Int}}}}}
 
   :Subscription
   {:fields

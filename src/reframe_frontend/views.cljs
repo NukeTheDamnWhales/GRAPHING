@@ -7,6 +7,8 @@
    [reframe-frontend.events :as events]
    [reframe-frontend.graphql :as graphql]))
 
+
+
 (defn make-link-list [first-url-part elements]
   [:div (map (fn [x]
                [:div
@@ -15,6 +17,8 @@
                 (when (= first-url-part :post)
                   [:p (str "| Author: " (:userName (first (:user x))) " | Comments: " (count (:comments x)) " |")])])
              elements)])
+
+
 
 (defn home-panel []
   (let [login-or-logout (re-frame/subscribe [::subs/auth-sub])]
@@ -27,6 +31,8 @@
                   (routes/url-for :auth))}
       (if @login-or-logout "Logout" "Login")]]))
 ;; about
+
+
 
 (defn user-panel []
   (let [userbytoken (re-frame/subscribe [::subs/user-info])
@@ -44,10 +50,14 @@
        [:td (:id userinfo)]
        [:td (:accessLevel userinfo)]]]]))
 
+
+
 (defn about-panel []
   [:div "This is the About Page."
    [:div [:a {:href (routes/url-for :home)} "go to Home Page"]]
    [:div [:a {:href (routes/url-for :boards)} "go to Boards Page"]]])
+
+
 
 (defn login-panel []
   (let [login (re-frame/subscribe [::subs/login-form])]
@@ -56,7 +66,6 @@
      [:form {:onSubmit (fn [e]
                          (let [{:keys [username password]} @login]
                            (.preventDefault e)
-                           ;; (.replace (.-location js/window) "/auth")
                            (re-frame/dispatch (graphql/LogIn username password))))}
       [:input {:type :text
                :value (:username @login)
@@ -68,13 +77,14 @@
                             (re-frame/dispatch [::events/login-panel :password (-> x .-target .-value)]))}]
       [:input {:type :submit :value "submit"}]]]))
 
+
+
 (defn create-user-panel []
   (let [create-user (re-frame/subscribe [::subs/create-user-form])]
     [:div
      [:form {:onSubmit (fn [e]
                          (let [{:keys [username password]} @create-user]
                            (.preventDefault e)
-                           ;; (.replace (.-location js/window) "/auth")
                            (re-frame/dispatch (graphql/CreateUser username password))))}
       [:input {:type :text
                :value (:username @create-user)
@@ -86,10 +96,14 @@
                             (re-frame/dispatch [::events/create-user :password (-> x .-target .-value)]))}]
       [:input {:type :submit :value "submit"}]]]))
 
+
+
 (defn boards-panel []
   (let [board (re-frame/subscribe [::subs/all-boards])]
     [:div.link-list
      (make-link-list :single-board @board)]))
+
+
 
 (defn single-board-panel []
   (let [board (re-frame/subscribe [::subs/current-board])
@@ -98,9 +112,56 @@
      [:a.create-user-link {:href (routes/url-for :create-post :id @board-id)} "create post"]
      ]))
 
+
+
+;; we wanna traverse and build a comment tree
+;; (defn make-comment-tree [comments]
+;;   (let [{:keys [body id user parent]} comments
+;;         first-level (map (fn [x] (when (:parent x)
+;;                                   )))]))
+
+
+
+
+;; Need to modify this to traverse comments and make a tree
+;; Also why the heck is the Comments form a lazy seq ?? probably because it returns derefs
 (defn post-panel []
-  (let [post (re-frame/subscribe [::subs/current-post])]
-    [:div (str @post)]))
+  (let [post (re-frame/subscribe [::subs/current-post])
+        {:keys [title body user comments id]} @post
+        create-comment (re-frame/subscribe [::subs/create-comment])
+        child-comment (fn [parent]
+                        [:form {:onSubmit (fn [e]
+                                            (let [body @create-comment]
+                                              (prn body )
+                                              (.preventDefault e)
+                                              (re-frame/dispatch (graphql/CreateComment body id parent))))}
+                         [:input {:type :text
+                                  :value @create-comment
+                                  :on-change (fn [x]
+                                               (re-frame/dispatch [::events/create-comment (-> x .-target .-value)]))}]
+                         [:input {:type :submit :value "submit"}]])
+        active-reply (re-frame/subscribe [::subs/active-reply])
+        ]
+    [:div.single-post-panel
+     [:header.top title
+      [:p body]
+      [:header (str "Author: " (:userName (first user)))]]
+     [:br]
+     (child-comment nil)
+     [:br]
+     [:header.comment "Comments: "
+      [:br]
+      (doall (map (fn [x] (let [{:keys [body id user]} x]
+                           [:header.c-auth {:key id} (str "Author: " (:userName (first user)))
+                            [:p (str " " body)]
+                            [:form {:onSubmit (fn [e]
+                                                (.preventDefault e)
+                                                (re-frame/dispatch [::events/active-reply id]))}
+                             [:input {:type :submit :value "Comment"}]]
+                            (when (= id @active-reply)
+                              (child-comment id))])) comments))]]))
+
+
 
 (defn create-post-panel []
   (let [create-post (re-frame/subscribe [::subs/create-post])
@@ -121,12 +182,16 @@
                             (re-frame/dispatch [::events/create-post :body (-> x .-target .-value)]))}]
       [:input {:type :submit :value "submit"}]]]))
 
+
+
 (defn users-online []
   (re-frame/dispatch graphql/OnlineUsers)
   (fn []
     (let [users (re-frame/subscribe [::subs/logged-in-users])
           user-list (:LoggedInUsers @users)]
       [:header.logged-in "currently online:" [:div (str user-list)]])))
+
+
 
 ;; main
 
@@ -145,8 +210,12 @@
     :user-panel [user-panel]
     [:div "You are horribly horribly lost 🥲"]))
 
+
+
 (defn show-panel [panel-name]
   [panels panel-name])
+
+
 
 (defn main-panel []
   ;; Testing zone

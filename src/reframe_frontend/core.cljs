@@ -9,9 +9,10 @@
    [reframe-frontend.flagencoding :as flag]
    ))
 
+;; replacing host dynamically, need config option
 
-(def host {:http "http://192.168.2.12/api"
-           :ws "ws://192.168.2.12/ws"})
+(def host {:http "http://localhost/api"
+           :ws "ws://localhost/ws"})
 
 
 (re-frame/reg-sub

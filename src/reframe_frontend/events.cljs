@@ -75,6 +75,11 @@
    (assoc-in db [:create-post x] y)))
 
 (re-frame/reg-event-db
+ ::create-comment
+ (fn [db [_ x]]
+   (assoc db :create-comment x)))
+
+(re-frame/reg-event-db
  ::set-board-id
  (fn [db [_ x]]
    (assoc db :current-board-id (js/Number x))))
@@ -95,3 +100,8 @@
  (fn [db {:keys [response]}]
    (let [{:keys [data errors]} response]
      (assoc db :user-info data))))
+
+(re-frame/reg-event-db
+ ::active-reply
+ (fn [db [_ x]]
+   (assoc db :active-reply x)))

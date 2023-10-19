@@ -65,6 +65,7 @@ create table comments (
   body text not null,
   post_id int references posts(post_id),
   user_id int references users(user_id),
+  parent_id int references comments(comment_id),
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp);
 
@@ -92,9 +93,9 @@ insert into posts (post_id, title, body, user_id, board_id) values
 
 alter table posts alter column post_id restart with 10;
 
-insert into comments (comment_id, body, post_id, user_id) values
-  (0, 'says a lot of things', 0, 0),
-  (1, 'a feud!', 0, 0);
+insert into comments (comment_id, body, post_id, user_id, parent_id) values
+  (0, 'says a lot of things', 0, 0, 0),
+  (1, 'a feud!', 0, 0, 0);
 
 alter table comments alter column comment_id restart with 10;
 
