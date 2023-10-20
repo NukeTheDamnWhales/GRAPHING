@@ -30,7 +30,7 @@
   [::re-graph/query
    {:instance-id :a
     :id :GetPost
-    :query "($id: Int) {GetPost(id: $id) {title body id user {userName} comments {body id user {userName}}}}"
+    :query "($id: Int) {GetPost(id: $id) {title body id user {userName} comments {body id parent user {userName}}}}"
     :variables {:id (js/Number x)}
     :callback [::events/get-gql-post]}])
 
@@ -89,6 +89,6 @@
   [::re-graph/mutate
    {:instance-id :a
    ;; :id :CreateComment
-    :query "($body: String $post: Int $parent: Int) {CreateComment(body: $body post: $post) {id}}"
+    :query "($body: String $post: Int $parent: Int) {CreateComment(body: $body post: $post parent: $parent)}"
     :variables {:body x :post y :parent z}
     :callback [::events/do-nothing]}])

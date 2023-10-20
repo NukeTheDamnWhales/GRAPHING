@@ -89,8 +89,59 @@ a.create-user-link {
 	font-weight: bold;
 
 	& .c-auth {
-	    font-size: 18px;
-	    font-weight: normal;
+	    font-size: 15px;
+	    font-weight: bold;
+
+	    & .body {
+		border: 1px solid black;
+		font-weight: normal;
+		font-size: 16px
+		max-height: 80px;
+		max-width: 200px;
+		overflow: scroll;
+		overflow-x: auto;;
+	    }
+	}
+
+	& .reply {
+	    font-size: 10px;
+	    color: blue;
+	}
+    }
+
+	& input.collapse {
+	    -webkit-appearance: initial;
+	    appearance: initial;
+	    border: none;
+	    position: relative;
+	}
+
+	& input.collapse:checked {
+	    appearance: initial;
+	    border: none;
+	    position: relative;
+	}
+
+	& input.collapse:checked:after {
+	    content: "➕";
+	    position: absolute;
+	    left: 44%;
+	     top: 43%;
+	    -webkit-transform: translate(-50%,-50%);
+	    -moz-transform: translate(-50%,-50%);
+	    -ms-transform: translate(-50%,-50%);
+	    transform: translate(-50%,-50%);
+	}
+
+	& input.collapse:before {
+	    content: "➖";
+	    position: absolute;
+	    left: 44%;
+	     top: 43%;
+	    -webkit-transform: translate(-50%,-50%);
+	    -moz-transform: translate(-50%,-50%);
+	    -ms-transform: translate(-50%,-50%);
+	    transform: translate(-50%,-50%);
 	}
 
 	& p {

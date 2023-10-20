@@ -41,9 +41,10 @@
    (let [{:keys [data errors]} response
          jwt (first (vals data))]
      (if (or errors (= (:RefreshToken data) "error"))
-       (do
-         (.clear (.-localStorage js/window))
-         (dissoc db :authorization))
+       ;; (do
+       ;;   ;; (.clear (.-localStorage js/window))
+       ;;   (dissoc db :authorization))
+       db
        (do
          (.setItem (.-localStorage js/window) "Authorization" jwt)
          (assoc db :authorization jwt))))))
@@ -53,9 +54,8 @@
  (fn [db [_ x]]
    (let [authorization (.getItem (.-localStorage js/window) "Authorization")]
      (if (= authorization "error")
-       (do
-         (.clear (.-localStorage js/window))
-         db)
+       ;; (.clear (.-localStorage js/window))
+         db
        (assoc db :authorization authorization)))))
 
 (re-frame/reg-event-db
@@ -105,3 +105,8 @@
  ::active-reply
  (fn [db [_ x]]
    (assoc db :active-reply x)))
+
+(re-frame/reg-event-db
+ ::clear-comment
+ (fn [db]
+   (dissoc db :create-comment)))

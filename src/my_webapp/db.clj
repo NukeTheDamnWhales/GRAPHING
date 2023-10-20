@@ -40,6 +40,7 @@
                              :body :body
                              :post_id :post
                              :user_id :user
+                             :parent_id :parent
                              :created_at :createdAt
                              :updated_at :updatedAt}))
 
@@ -69,14 +70,14 @@
 (defn find-comment-by-post
   [component post-id]
   (->> (jdbc/query component
-                   ["select comment_id, body, user_id, post_id, created_at, updated_at from comments where post_id = ?" post-id])
+                   ["select comment_id, body, user_id, post_id, parent_id, created_at, updated_at from comments where post_id = ?" post-id])
        (map remap-comment)))
 
 
 (defn create-comment
   [component body post user parent_id]
-  (jdbc/execute! component
-                 ["insert into comments (user_id, body, post_id, parent_id) values (?, ?, ?, ?)" user body post parent_id])
+  (->> (jdbc/execute! component
+                      ["insert into comments (user_id, body, post_id, parent_id) values (?, ?, ?, ?)" user body post parent_id]))
   nil)
 ;; Field Resolver Format below
 
@@ -104,7 +105,7 @@
 (defn find-comment-by-id
   [component comment-id]
   (-> (jdbc/query component
-                  ["select comment_id, body, post_id, user_id, created_at, updated_at from comments where comment_id = ?" comment-id])
+                  ["select comment_id, body, post_id, user_id, parent_id, created_at, updated_at from comments where comment_id = ?" comment-id])
       first
       remap-comment))
 

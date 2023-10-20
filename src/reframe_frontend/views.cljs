@@ -112,15 +112,54 @@
      [:a.create-user-link {:href (routes/url-for :create-post :id @board-id)} "create post"]
      ]))
 
+(defn make-comment-tree
+  ([comments]
+   (make-comment-tree (filter (fn [x] (if (:parent x) nil x)) comments)
+                      (filter (fn [x] (if (:parent x) x nil)) comments)))
+  ([first-level comments]
+   (map (fn [x] (let [children (filter (fn [y] (= (:id x) (:parent y))) comments)]
+                 (assoc-in x [:children] (if (not-empty children)
+                                           (make-comment-tree children comments)
+                                           children))))
+        first-level)))
+;; (set! (-> (. js/document (getElementById "12")) .-style .-display) "none")
+
+;; (defn child-comment [parent create-comment]
+;;   [:form {:onSubmit (fn [e]
+;;                       (let [body @create-comment]
+;;                         (prn body)
+;;                         (.preventDefault e)
+;;                         (re-frame/dispatch (graphql/CreateComment body id parent))))}
+;;    [:input {:type :text
+;;             :value @create-comment
+;;             :on-change (fn [x]
+;;                          (re-frame/dispatch [::events/create-comment (-> x .-target .-value)]))}]
+;;    [:input {:type :submit :value "submit"}]])
 
 
-;; we wanna traverse and build a comment tree
-;; (defn make-comment-tree [comments]
-;;   (let [{:keys [body id user parent]} comments
-;;         first-level (map (fn [x] (when (:parent x)
-;;                                   )))]))
-
-
+(defn make-comment-tree-hiccup
+  [comments parent-id active-reply child-comment]
+  (let [{:keys [body user id children]} comments
+        child-list (conj (map (fn [x] (:id x)) children) id)]
+    [:div {:key (str "close-" id)}
+     [:input.collapse {:id "toggle" :type "checkbox":onChange (fn [e]
+                                                       (into []
+                                                             (map (fn [y]
+                                                                    (let [element (. js/document (getElementById (str y)))]
+                                                                      (if (= (-> element .-style .-display) "none")
+                                                                        (set! (-> element .-style .-display) "block")
+                                                                        (set! (-> element .-style .-display) "none")))))
+                                                             child-list))}]
+     [:ul.c-auth {:key id :class (str child-list) :id id} (:userName (first user))
+      [:li.body body]
+      [:a.reply {:onClick (fn [e]
+                            (.preventDefault e)
+                            (re-frame/dispatch [::events/clear-comment])
+                            (re-frame/dispatch [::events/active-reply id]))} "reply"]
+      (when (= id @active-reply)
+        (child-comment id))
+      (when (not-empty children)
+        (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment))) children))]]))
 
 
 ;; Need to modify this to traverse comments and make a tree
@@ -132,16 +171,17 @@
         child-comment (fn [parent]
                         [:form {:onSubmit (fn [e]
                                             (let [body @create-comment]
-                                              (prn body )
+                                              (prn body)
                                               (.preventDefault e)
-                                              (re-frame/dispatch (graphql/CreateComment body id parent))))}
+                                              (re-frame/dispatch (graphql/CreateComment body id parent))
+                                              (re-frame/dispatch (graphql/GetPost (:id id)))
+                                              (re-frame/dispatch [::events/clear-comment])))}
                          [:input {:type :text
                                   :value @create-comment
                                   :on-change (fn [x]
                                                (re-frame/dispatch [::events/create-comment (-> x .-target .-value)]))}]
                          [:input {:type :submit :value "submit"}]])
-        active-reply (re-frame/subscribe [::subs/active-reply])
-        ]
+        active-reply (re-frame/subscribe [::subs/active-reply])]
     [:div.single-post-panel
      [:header.top title
       [:p body]
@@ -150,16 +190,20 @@
      (child-comment nil)
      [:br]
      [:header.comment "Comments: "
+      (into [:div]
+            (map (fn [x] (make-comment-tree-hiccup x id active-reply child-comment)))
+            (make-comment-tree comments))
       [:br]
-      (doall (map (fn [x] (let [{:keys [body id user]} x]
-                           [:header.c-auth {:key id} (str "Author: " (:userName (first user)))
-                            [:p (str " " body)]
-                            [:form {:onSubmit (fn [e]
-                                                (.preventDefault e)
-                                                (re-frame/dispatch [::events/active-reply id]))}
-                             [:input {:type :submit :value "Comment"}]]
-                            (when (= id @active-reply)
-                              (child-comment id))])) comments))]]))
+      ;; (doall (map (fn [x] (let [{:keys [body id user]} x]
+      ;;                       [:header.c-auth {:key id} (str "Author: " (:userName (first user)))
+      ;;                        [:p (str " " body)]
+      ;;                        [:form {:onSubmit (fn [e]
+      ;;                                            (.preventDefault e)
+      ;;                                            (re-frame/dispatch [::events/active-reply id]))}
+      ;;                         [:input.reply {:type :submit :value "Reply"}]]
+      ;;                        (when (= id @active-reply)
+      ;;                          (child-comment id))])) comments))
+      ]]))
 
 
 

@@ -58,6 +58,7 @@ will be used with context fields like a token"
    :fields
    {:id {:type (non-null Int)}
     :body {:type (non-null String)}
+    :parent {:type Int}
     :timeStamp {:type (non-null String)}
     :user {:type (non-null (list :User))}
     :post {:type (non-null (list :Post))}}}
@@ -149,12 +150,12 @@ will be used with context fields like a token"
       :password {:type (non-null String)}}}
 
     :CreateComment
-    {:type :Comment
+    {:type String
      :description "Create a new comment automatically gets User from token"
      :args
      {:body {:type (non-null String)}
       :post {:type (non-null Int)}
-      :comment {:type Int}}}}}
+      :parent {:type Int}}}}}
 
   :Subscription
   {:fields

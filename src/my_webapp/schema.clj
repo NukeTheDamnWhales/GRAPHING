@@ -149,7 +149,7 @@
                             {:user-id nil}))
           {:keys [body post parent]} args]
       (if id
-        (db/create-comment db body post id)
+        (db/create-comment db body post id parent)
         "error"))))
 
 ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
