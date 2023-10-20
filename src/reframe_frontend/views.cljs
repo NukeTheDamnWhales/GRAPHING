@@ -139,25 +139,25 @@
 
 (defn make-comment-tree-hiccup
   [comments parent-id active-reply child-comment]
-  (let [{:keys [body user id children]} comments
-        child-list (conj (map (fn [x] (:id x)) children) id)]
+  (let [{:keys [body user id children]} comments]
     [:div {:key (str "close-" id)}
-     [:input.collapse {:id "toggle" :type "checkbox":onChange (fn [e]
-                                                       (into []
-                                                             (map (fn [y]
-                                                                    (let [element (. js/document (getElementById (str y)))]
-                                                                      (if (= (-> element .-style .-display) "none")
-                                                                        (set! (-> element .-style .-display) "block")
-                                                                        (set! (-> element .-style .-display) "none")))))
-                                                             child-list))}]
-     [:ul.c-auth {:key id :class (str child-list) :id id} (:userName (first user))
+     [:input.collapse {:id "toggle" :type "checkbox" :onChange (fn [e]
+                                                                 (let [element (. js/document (getElementById (str id)))]
+                                                                   (if (= (-> element .-style .-display) "none")
+                                                                     (set! (-> element .-style .-display) "block")
+                                                                     (set! (-> element .-style .-display) "none"))))}]
+     [:ul.c-auth {:key id :id id} (:userName (first user))
       [:li.body body]
-      [:a.reply {:onClick (fn [e]
-                            (.preventDefault e)
-                            (re-frame/dispatch [::events/clear-comment])
-                            (re-frame/dispatch [::events/active-reply id]))} "reply"]
-      (when (= id @active-reply)
-        (child-comment id))
+      (if (= id @active-reply)
+        [:div (child-comment id)
+         [:a.cancel {:onClick (fn [e]
+                               (.preventDefault e)
+                               (re-frame/dispatch [::events/clear-comment])
+                               (re-frame/dispatch [::events/active-reply nil]))} "cancel"]]
+        [:a.reply {:onClick (fn [e]
+                              (.preventDefault e)
+                              (re-frame/dispatch [::events/clear-comment])
+                              (re-frame/dispatch [::events/active-reply id]))} "reply"])
       (when (not-empty children)
         (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment))) children))]]))
 
