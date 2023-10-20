@@ -92,3 +92,12 @@
     :query "($body: String $post: Int $parent: Int) {CreateComment(body: $body post: $post parent: $parent)}"
     :variables {:body x :post y :parent z}
     :callback [::events/do-nothing]}])
+
+(defn DeleteComment
+  [x]
+  [::re-graph/mutate
+   {:instance-id :a
+   ;; :id :CreateComment
+    :query "($id: Int) {DeleteComment(id: $id)}"
+    :variables {:id x}
+    :callback [::events/do-nothing]}])

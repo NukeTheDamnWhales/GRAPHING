@@ -72,6 +72,11 @@
   (fn [_ _ user]
     (db/find-user-by-post db (:user user))))
 
+(defn board-to-user
+  [db]
+  (fn [_ _ id]
+    (db/find-user-by-board db (:id id))))
+
 (defn comment-to-user
   [db]
   (fn [_ _ user]
@@ -139,7 +144,7 @@
            password :password} args]
       (try (db/create-user db username password)
            (catch Exception e
-             "Error")))))
+             "error")))))
 
 (defn create-comment
   [db]
@@ -152,6 +157,16 @@
         (db/create-comment db body post id parent)
         "error"))))
 
+(defn delete-comment
+  [db]
+  (fn [context args _]
+    (let [{user-id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                                  (catch Exception e
+                                    {:user-id nil}))
+          {:keys [id]} args]
+      (if (= user-id (:user (db/find-comment-by-id db id)))
+        (db/delete-comment db id)
+        "error"))))
 ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
 ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 (defn log-out
@@ -216,6 +231,8 @@
      :Mutation/LogOut (log-out queue)
      :Mutation/CreateUser (create-user db)
      :Mutation/CreateComment (create-comment db)
+     :Mutation/DeleteComment (delete-comment db)
+     :Board/members (board-to-user db)
      :Comment/post (comment-to-post db)
      :Post/user (post-to-user db)
      :Post/comments (post-to-comment db)

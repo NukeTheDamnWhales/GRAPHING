@@ -44,6 +44,12 @@
                              :created_at :createdAt
                              :updated_at :updatedAt}))
 
+(defn- remap-members
+  [row-data]
+  (set/rename-keys row-data {:board_id :board
+                             :user_id :id
+                             :member_id :member}))
+
 (defn- remap-board
   [row-data]
   (set/rename-keys row-data {:board_id :id
@@ -78,6 +84,12 @@
   [component body post user parent_id]
   (->> (jdbc/execute! component
                       ["insert into comments (user_id, body, post_id, parent_id) values (?, ?, ?, ?)" user body post parent_id]))
+  nil)
+
+(defn delete-comment
+  [component comment_id]
+  (->> (jdbc/execute! component
+                      ["delete from comments where comment_id = ?" comment_id]))
   nil)
 ;; Field Resolver Format below
 
@@ -125,10 +137,21 @@
       remap-user
       ))
 
+(defn find-user-by-board
+  [component auth-id]
+  (let [users (map :user_id (jdbc/query component
+                                        ["select user_id from members where board_id = ?" auth-id]))]
+    (map
+     (fn [x] (-> x first remap-user))
+     (map (fn [x] (jdbc/query component ["select user_id, username from users where user_id =?" x]))
+          users))))
+
 (defn get-all-boards
   [component]
+  ;; (prn (jdbc/query component
+  ;;                  ["select * from boards"]))
   (map remap-board (jdbc/query component
-              ["select * from boards"])))
+                               ["select * from boards"])))
 
 (defn get-posts-by-board
   [component board-id]

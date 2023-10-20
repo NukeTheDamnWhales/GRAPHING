@@ -40,6 +40,7 @@ will be used with context fields like a token"
   {:description "different forum boards"
    :fields
    {:id {:type (non-null Int)}
+    :members {:type (list :User)}
     :title {:type (non-null String)}}}
 
   :Post
@@ -155,7 +156,13 @@ will be used with context fields like a token"
      :args
      {:body {:type (non-null String)}
       :post {:type (non-null Int)}
-      :parent {:type Int}}}}}
+      :parent {:type Int}}}
+
+    :DeleteComment
+    {:type String
+     :description "Delete a comment"
+     :args
+     {:id {:type (non-null Int)}}}}}
 
   :Subscription
   {:fields

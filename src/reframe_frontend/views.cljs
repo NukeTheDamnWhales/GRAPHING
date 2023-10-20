@@ -1,11 +1,14 @@
 (ns reframe-frontend.views
   (:require
+   [clojure.string :as string]
    [re-frame.core :as re-frame]
    [re-graph.core :as re-graph]
    [reframe-frontend.routes :as routes]
    [reframe-frontend.subs :as subs]
    [reframe-frontend.events :as events]
-   [reframe-frontend.graphql :as graphql]))
+   [reframe-frontend.graphql :as graphql]
+   [cljs.reader :as reader]
+   [clojure.walk :as walk]))
 
 
 
@@ -122,23 +125,12 @@
                                            (make-comment-tree children comments)
                                            children))))
         first-level)))
-;; (set! (-> (. js/document (getElementById "12")) .-style .-display) "none")
 
-;; (defn child-comment [parent create-comment]
-;;   [:form {:onSubmit (fn [e]
-;;                       (let [body @create-comment]
-;;                         (prn body)
-;;                         (.preventDefault e)
-;;                         (re-frame/dispatch (graphql/CreateComment body id parent))))}
-;;    [:input {:type :text
-;;             :value @create-comment
-;;             :on-change (fn [x]
-;;                          (re-frame/dispatch [::events/create-comment (-> x .-target .-value)]))}]
-;;    [:input {:type :submit :value "submit"}]])
+
 
 
 (defn make-comment-tree-hiccup
-  [comments parent-id active-reply child-comment]
+  [comments parent-id active-reply child-comment logged-in-user]
   (let [{:keys [body user id children]} comments]
     [:div {:key (str "close-" id)}
      [:input.collapse {:id "toggle" :type "checkbox" :onChange (fn [e]
@@ -157,15 +149,26 @@
         [:a.reply {:onClick (fn [e]
                               (.preventDefault e)
                               (re-frame/dispatch [::events/clear-comment])
-                              (re-frame/dispatch [::events/active-reply id]))} "reply"])
+                              (re-frame/dispatch [::events/active-reply id]))} " reply "])
+      (when (and logged-in-user (= (:userName (first user))
+                                   (:user logged-in-user)))
+        [:a.delete {:onClick (fn [e]
+                               (re-frame/dispatch (graphql/DeleteComment id))
+                               (re-frame/dispatch (graphql/GetPost (:id id))))} " delete "])
       (when (not-empty children)
-        (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment))) children))]]))
-
+        (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment logged-in-user))) children))]]))
 
 ;; Need to modify this to traverse comments and make a tree
 ;; Also why the heck is the Comments form a lazy seq ?? probably because it returns derefs
 (defn post-panel []
   (let [post (re-frame/subscribe [::subs/current-post])
+        logged-in-token (re-frame/subscribe [::subs/auth-sub])
+        logged-in-user (try (into {}
+                                  (mapv (fn [x] (-> x js/atob (string/replace #":" "") (reader/read-string) walk/keywordize-keys))
+                                        (pop (string/split @logged-in-token "."))))
+                            (catch js/Error e
+                              nil))
+        ;; (map (fn [x] (prn x)(js/atob x)) (string/split @logged-in-token "."))
         {:keys [title body user comments id]} @post
         create-comment (re-frame/subscribe [::subs/create-comment])
         child-comment (fn [parent]
@@ -173,6 +176,7 @@
                                             (let [body @create-comment]
                                               (prn body)
                                               (.preventDefault e)
+                                              (re-frame/dispatch [::events/active-reply nil])
                                               (re-frame/dispatch (graphql/CreateComment body id parent))
                                               (re-frame/dispatch (graphql/GetPost (:id id)))
                                               (re-frame/dispatch [::events/clear-comment])))}
@@ -191,7 +195,7 @@
      [:br]
      [:header.comment "Comments: "
       (into [:div]
-            (map (fn [x] (make-comment-tree-hiccup x id active-reply child-comment)))
+            (map (fn [x] (make-comment-tree-hiccup x id active-reply child-comment logged-in-user)))
             (make-comment-tree comments))
       [:br]
       ;; (doall (map (fn [x] (let [{:keys [body id user]} x]

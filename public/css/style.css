@@ -104,6 +104,12 @@ a.create-user-link {
 	    }
 	}
 
+	& .delete {
+	    font-size: 12px;
+	    color: red;
+	}
+
+
 	& .reply {
 	    font-size: 12px;
 	    color: blue;
