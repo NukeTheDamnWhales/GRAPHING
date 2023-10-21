@@ -17,8 +17,13 @@
                [:div
                 {:key (str (:id x))}
                 [:a {:href (routes/url-for first-url-part :id (:id x))} (str (:title x))]
-                (when (= first-url-part :post)
-                  [:p (str "| Author: " (:userName (first (:user x))) " | Comments: " (count (:comments x)) " |")])])
+                (cond
+                  (= first-url-part :post) [:p (str "| Author: " (:userName (first (:user x))) " | Comments: " (-> x :comments count) " |")]
+                  (= first-url-part :single-board)
+                  [:p (str "| Creator: " (-> x :owner :userName) " | Members: "
+                           (if (empty? (:members x))
+                             "public"
+                             (:members x)))])])
              elements)])
 
 
@@ -103,6 +108,7 @@
 
 (defn boards-panel []
   (let [board (re-frame/subscribe [::subs/all-boards])]
+    (re-frame/dispatch (graphql/AddMembers [29 30 31] 1))
     [:div.link-list
      (make-link-list :single-board @board)]))
 
@@ -121,9 +127,11 @@
                       (filter (fn [x] (if (:parent x) x nil)) comments)))
   ([first-level comments]
    (map (fn [x] (let [children (filter (fn [y] (= (:id x) (:parent y))) comments)]
-                 (assoc-in x [:children] (if (not-empty children)
-                                           (make-comment-tree children comments)
-                                           children))))
+                 (assoc-in x [:children]
+                           ;;changed not-empty to seq
+                           (if (seq? children)
+                             (make-comment-tree children comments)
+                             children))))
         first-level)))
 
 
@@ -154,7 +162,8 @@
                                    (:user logged-in-user)))
         [:a.delete {:onClick (fn [e]
                                (re-frame/dispatch (graphql/DeleteComment id))
-                               (re-frame/dispatch (graphql/GetPost (:id id))))} " delete "])
+                               ;; (re-frame/dispatch (graphql/GetPost (:id id)))
+                               )} " delete "])
       (when (not-empty children)
         (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment logged-in-user))) children))]]))
 
@@ -174,12 +183,10 @@
         child-comment (fn [parent]
                         [:form {:onSubmit (fn [e]
                                             (let [body @create-comment]
-                                              (prn body)
                                               (.preventDefault e)
-                                              (re-frame/dispatch [::events/active-reply nil])
                                               (re-frame/dispatch (graphql/CreateComment body id parent))
-                                              (re-frame/dispatch (graphql/GetPost (:id id)))
-                                              (re-frame/dispatch [::events/clear-comment])))}
+                                              (re-frame/dispatch [::events/clear-comment])
+                                              (re-frame/dispatch [::events/active-reply nil])))}
                          [:input {:type :text
                                   :value @create-comment
                                   :on-change (fn [x]
@@ -276,6 +283,7 @@
        nil))
    (* 2 60 1000))
   (re-frame/dispatch [::events/reload-auth])
+
   (fn []
     (let [active-panel (re-frame/subscribe [::subs/active-panel])
           auth-reload (re-frame/subscribe [::subs/auth-sub])]

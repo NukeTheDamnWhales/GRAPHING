@@ -9,7 +9,9 @@
   []
   (assoc (component/system-map)
          :queue (us/map->UserQueue {})
-         :db (db/map->MyWebappDb {})
+         :db (component/using
+              (db/map->MyWebappDb {})
+              [:queue])
          :server (component/using
                   (server/map->Server {})
                   [:schema-provider :db :queue])

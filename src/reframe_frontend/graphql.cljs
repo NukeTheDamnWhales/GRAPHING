@@ -8,7 +8,7 @@
   [::re-graph/query
    {:instance-id :a
     :id :GetAllBoards
-    :query "{GetAllBoards {title id}}"
+    :query "{GetAllBoards {title id owner {userName id} members {userName}}}"
     :callback [::events/get-gql-boards]}])
 
 (def UserByToken
@@ -47,7 +47,6 @@
     :id :LoggedInUsers
     :query "{LoggedInUsers}"
     :callback [::events/logged-in-users]}])
-
 
 (def RefreshToken
   [::re-graph/mutate
@@ -89,9 +88,9 @@
   [::re-graph/mutate
    {:instance-id :a
    ;; :id :CreateComment
-    :query "($body: String $post: Int $parent: Int) {CreateComment(body: $body post: $post parent: $parent)}"
+    :query "($body: String $post: Int $parent: Int) {CreateComment(body: $body post: $post parent: $parent) {body id parent user {userName}}}"
     :variables {:body x :post y :parent z}
-    :callback [::events/do-nothing]}])
+    :callback [::events/update-comment nil]}])
 
 (defn DeleteComment
   [x]
@@ -100,4 +99,13 @@
    ;; :id :CreateComment
     :query "($id: Int) {DeleteComment(id: $id)}"
     :variables {:id x}
+    :callback [::events/update-comment {:id (js/Number x)}]}])
+
+(defn AddMembers
+  [x y]
+  [::re-graph/mutate
+   {:instance-id :a
+   ;; :id :CreateComment
+    :query "($users: [Int] $board: Int) {AddMembers(users: $users board: $board) {... on User {id} ... on NotFoundAcceptableNull {message}}}"
+    :variables {:users x :board y}
     :callback [::events/do-nothing]}])

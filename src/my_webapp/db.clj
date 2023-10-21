@@ -1,7 +1,9 @@
 (ns my-webapp.db
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.set :as set]
-            [com.stuartsierra.component :as component])
+            [clojure.core.async :as async :refer [<! >! <!! >!! go put! close! chan]]
+            [com.stuartsierra.component :as component]
+            [com.walmartlabs.lacinia.schema :as schema])
   (:import (com.mchange.v2.c3p0 ComboPooledDataSource)))
 
 (defn- pooled-data-source
@@ -53,6 +55,7 @@
 (defn- remap-board
   [row-data]
   (set/rename-keys row-data {:board_id :id
+                             :user_id :user_id
                              :title :title}))
 
 (defn create-user
@@ -82,15 +85,21 @@
 
 (defn create-comment
   [component body post user parent_id]
-  (->> (jdbc/execute! component
-                      ["insert into comments (user_id, body, post_id, parent_id) values (?, ?, ?, ?)" user body post parent_id]))
-  nil)
+  (->
+   (jdbc/insert! component :comments
+                 {:user_id user :body body :post_id post :parent_id parent_id})
+   first
+   remap-comment))
 
 (defn delete-comment
   [component comment_id]
-  (->> (jdbc/execute! component
-                      ["delete from comments where comment_id = ?" comment_id]))
-  nil)
+  (try (if (= 1 (first
+             (jdbc/delete! component :comments
+                           ["comment_id = ?" comment_id])))
+     comment_id
+     nil)
+       (catch Exception e
+         nil)))
 ;; Field Resolver Format below
 
 (defn find-user-by-post
@@ -112,6 +121,14 @@
                   ["select post_id, title, body, user_id, board_id created_at, updated_at from posts where post_id = ?" post-id])
       first
       remap-post
+      ))
+
+(defn find-board-by-id
+  [component board-id]
+  (-> (jdbc/query component
+                  ["select * from boards where board_id = ?" board-id])
+      first
+      remap-board
       ))
 
 (defn find-comment-by-id
@@ -146,6 +163,29 @@
      (map (fn [x] (jdbc/query component ["select user_id, username from users where user_id =?" x]))
           users))))
 
+(defn find-owner-by-board
+  [component user_id]
+  (-> (jdbc/query component
+                  ["select user_id, username, accesslevel from users where user_id = ?" user_id])
+      first
+      remap-user))
+
+(defn add-users-to-board
+  [component users board_id queue]
+  (go (<! (-> queue :queue :using))
+      (let [user-records (mapv (fn [x] (-> x vals first)) (jdbc/query component ["select user_id from members where board_id = ?" board_id]))
+            dedup (filterv (fn [x] (not (some #{x} user-records))) users)]
+        (if (not-empty dedup)
+          (map remap-members
+               (try (let [ret (jdbc/insert-multi! component :members
+                                                  (mapv (fn [x] {:user_id x :board_id board_id}) dedup))]
+                      (>! (-> queue :queue :using) 1)
+                      ret)
+                    (catch Exception e
+                      "error")))
+          (do (>! (-> queue :queue :using) 1)
+           (schema/tag-with-type (list "duplicate or not authorized") :User))))))
+
 (defn get-all-boards
   [component]
   ;; (prn (jdbc/query component
@@ -158,7 +198,7 @@
   (map remap-post (jdbc/query component
                ["select * from posts where board_id = ?" board-id])))
 
-(defrecord MyWebappDb [^ComboPooledDataSource datasource]
+(defrecord MyWebappDb [^ComboPooledDataSource datasource queue]
 
   component/Lifecycle
 
@@ -166,5 +206,6 @@
     (assoc this :datasource (pooled-data-source "localhost" "mydb" "my_role" "lacinia" 25432)))
 
   (stop [this]
+    (<!! (:using (:queue queue)))
     (.close datasource)
     (assoc this :datasource nil)))

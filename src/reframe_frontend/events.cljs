@@ -110,3 +110,16 @@
  ::clear-comment
  (fn [db]
    (dissoc db :create-comment)))
+
+
+(re-frame/reg-event-db
+ ::update-comment
+ [re-frame/unwrap]
+ (fn [db {:keys [response]}]
+   (let [{:keys [data errors]} response
+         comments (-> db :current-post :GetPost :comments)]
+     (reduce-kv (fn [m k v]
+                  (assoc-in m [:current-post :GetPost :comments] (if (= :CreateComment k)
+                                                                   (conj comments (k data))
+                                                                   (remove #(= v (:id %)) comments))))
+                db data))))

@@ -30,23 +30,6 @@
         (schema/tag-with-type (db/find-user-by-username db username) :User)
         (schema/tag-with-type {:message "error"} :NotFoundAcceptableNull)))))
 
-(defn auth-walk*
-  [auth-map]
-  (flatten (map (fn [x] (if (:selections x)
-                         (cons (-> x
-                                   :field-definition
-                                   :directives)
-                               (auth-walk* (:selections x)))
-                         (-> x
-                             :field-definition
-                             :directives))) auth-map)))
-
-(defn auth-walk
-  [auth-map]
-  (map #(-> %
-            :directive-args
-            :role) (auth-walk* auth-map)))
-
 (defn user-by-id
   [db]
   (fn [context args _]
@@ -76,6 +59,11 @@
   [db]
   (fn [_ _ id]
     (db/find-user-by-board db (:id id))))
+
+(defn board-to-owner
+  [db]
+  (fn [_ _ owner]
+    (db/find-owner-by-board db (:owner owner))))
 
 (defn comment-to-user
   [db]
@@ -125,8 +113,7 @@
 (defn login
   [db queue]
   (fn [context args _]
-    (let [{username :username
-           password :password} args
+    (let [{:keys [username password]} args
           actualpass (:password (db/find-user-by-username db username))
           existing (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
                         (catch Exception e
@@ -181,6 +168,19 @@
             "Logged Out")
         "Not logged in"))))
 
+(defn add-members
+  [db queue]
+  (fn [context args _]
+    (let [{user-id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+                  (catch Exception e
+                    {:user-id nil}))
+          {:keys [users board]} args
+          selected-board-owner (:owner (db/find-board-by-id db board))]
+      (if (= user-id selected-board-owner)
+        (db/add-users-to-board db users board queue)
+        "error")
+      )))
+
 (defn super-subscription
   []
   (fn [_ _ source-stream]
@@ -232,7 +232,9 @@
      :Mutation/CreateUser (create-user db)
      :Mutation/CreateComment (create-comment db)
      :Mutation/DeleteComment (delete-comment db)
+     :Mutation/AddMembers (add-members db queue)
      :Board/members (board-to-user db)
+     :Board/owner (board-to-owner db)
      :Comment/post (comment-to-post db)
      :Post/user (post-to-user db)
      :Post/comments (post-to-comment db)

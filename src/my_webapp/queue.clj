@@ -24,12 +24,14 @@
 
   (start [this]
     (let [in (chan 1)
+          using (chan 1)
           streamer (pub in :online-users)
           user-queue (agent {:users {}})
           kill-channel (chan 1)]
 
       (add-watch user-queue :user-queue (fn [_ _ _ n]
                                           (put! in {:online-users :user-listener :data n})))
+      (>!! using "1")
       (go-loop []
         ;;(prn (. System (nanoTime)))
         (let [[n _] (alts!
@@ -39,11 +41,12 @@
             nil
             (recur))))
 
-      (assoc this :queue {:streamer streamer :in in :user-queue user-queue :kill-channel kill-channel})))
+      (assoc this :queue {:streamer streamer :in in :user-queue user-queue :kill-channel kill-channel :using using})))
 
   (stop [this]
-    (when-let [{in :in user-queue :user-queue kill-channel :kill-channel} (:queue this)]
+    (when-let [{in :in user-queue :user-queue kill-channel :kill-channel using :using} (:queue this)]
       (>!! kill-channel "kill")
+      (close! using)
       (close! kill-channel)
       (remove-watch user-queue :user-queue)
       (close! in)

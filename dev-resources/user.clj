@@ -56,3 +56,8 @@
   []
   (alter-var-root #'system component/stop-system)
   :stopped)
+
+(defn r []
+  (stop)
+  (start)
+  "restarted")

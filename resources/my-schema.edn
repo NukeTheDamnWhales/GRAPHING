@@ -40,6 +40,7 @@ will be used with context fields like a token"
   {:description "different forum boards"
    :fields
    {:id {:type (non-null Int)}
+    :owner {:type :User}
     :members {:type (list :User)}
     :title {:type (non-null String)}}}
 
@@ -150,8 +151,14 @@ will be used with context fields like a token"
      {:username {:type (non-null String)}
       :password {:type (non-null String)}}}
 
+    :AddMembers
+    {:type (list :User)
+     :args
+     {:users {:type (list (non-null Int))}
+      :board {:type (non-null Int)}}}
+
     :CreateComment
-    {:type String
+    {:type :Comment
      :description "Create a new comment automatically gets User from token"
      :args
      {:body {:type (non-null String)}
@@ -159,7 +166,7 @@ will be used with context fields like a token"
       :parent {:type Int}}}
 
     :DeleteComment
-    {:type String
+    {:type Int
      :description "Delete a comment"
      :args
      {:id {:type (non-null Int)}}}}}
