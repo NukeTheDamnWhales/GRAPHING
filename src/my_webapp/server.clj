@@ -21,33 +21,35 @@
   ([compiled-schema app-context options]
    (default-interceptors compiled-schema app-context options nil))
   ([compiled-schema app-context options db]
+   (default-interceptors compiled-schema app-context options db nil))
+  ([compiled-schema app-context options db queue]
    [ ;; lp/initialize-tracing-interceptor
-;;    auth/cookie-response-interceptor
+    ;;    auth/cookie-response-interceptor
     lp/json-response-interceptor
     lp/error-response-interceptor
     lp/body-data-interceptor
-    auth/token-interceptor
+    (auth/token-interceptor queue)
     lp/graphql-data-interceptor
     ;;    permissions-check
     lp/status-conversion-interceptor
     lp/missing-query-interceptor
     (lp/query-parser-interceptor compiled-schema (:parsed-query-cache options))
-;;    lp/disallow-subscriptions-interceptor
+    ;;    lp/disallow-subscriptions-interceptor
     lp/prepare-query-interceptor
     (lp/inject-app-context-interceptor app-context)
-    (auth/auth-interceptor db)
+    auth/auth-interceptor
     ;; lp/enable-tracing-interceptor
     lp/query-executor-handler]))
 
 (defn my-service
-  [compiled-schema db options]
+  [compiled-schema db queue options]
   (let [{:keys [api-path ide-path asset-path app-context port host]
          :or {api-path default-api-path
               ide-path "/ide"
               asset-path default-asset-path
               port 8888
               host default-host-address}} options
-        interceptors (default-interceptors compiled-schema app-context options db)
+        interceptors (default-interceptors compiled-schema app-context options db queue)
         routes (into #{[api-path :post interceptors :route-name ::graphql-api]
                        [ide-path :get (lp/graphiql-ide-handler options) :route-name ::graphiql-ide]}
                      (lp/graphiql-asset-routes asset-path))]
@@ -67,7 +69,7 @@
   (start [this]
     (assoc this :server (-> schema-provider
                             :schema
-                            (my-service (:db this) nil)
+                            (my-service (:db this) (:queue this) nil)
                             (merge {:env :dev
                                     ::http/allowed-origins {:creds true :allowed-origins (constantly true)}
                                     ::http/secure-headers {:content-security-policy-settings {:object-sec "'none'"}}})

@@ -5,8 +5,7 @@
    [clj-time.core :as time]
    [io.pedestal.interceptor :refer [interceptor]]
    [com.walmartlabs.lacinia.pedestal.internal :as internal]
-   [my-webapp.db :as db]
-   [clojure.pprint]))
+   [my-webapp.db :as db]))
 
 (defonce token-time 10)
 (defonce secret "abc")
@@ -17,72 +16,43 @@
    :admin 2})
 
 (defn token-verify
-  [context]
+  [token]
   (if-let
-      [token (:token context)]
-    (keyword (:access-level token))
-    :guest))
+      [verified token]
+      ((-> verified :access-level keyword) access-level)
+      0))
 
-;; (defn auth-walk2*
-;;   [selections]
-;;   (mapv #(reduce-kv (fn [m k v]
-;;                       (into m
-;;                             (cond
-;;                               (= :selections k) (auth-walk2* v)
-;;                               (= :field-definition k) (mapv (fn [x] (-> x :directive-args :role))
-;;                                                             (-> v :directives))))) [] %) selections))
-
-;; (defn auth-walk2*
-;;   [selections]
-;;   (prn (reduce (partial identity) selections))
-;;   (clojure.pprint/pprint ((juxt #(when-let [sel (:selections %)]
-;;                                    (auth-walk2* sel))
-;;                                 ;; (clojure.pprint/pprint %)(prn)
-;;                                 #(some-> % :field-definition :directives)) (pop selections))))
-
-(defn auth-walk2*
+(defn auth-walk
   [selections]
   (mapcat (fn [x]
             (let [des ((juxt :field-definition :selections) x)]
               (concat (some-> des pop peek :directives peek :directive-args vals)
-                      (some-> des peek auth-walk2*)))) selections))
+                      (some-> des peek auth-walk)))) selections))
 
-(defn auth-walk*
-  [auth-map]
-  (let [directives #(get-in % [:field-definition :directives])]
-    (flatten (map (fn [x] (if (:selections x)
-                           (cons (directives x)
-                                 (auth-walk* (:selections x)))
-                           (directives x))) auth-map))))
-
-(defn auth-walk
-  [auth-map]
-  (map #(-> %
-            :directive-args
-            :role) (auth-walk* auth-map)))
-
-(def token-interceptor
+(defn token-interceptor
+  [queue]
   (interceptor
    {:name ::token-inter
     :enter (fn [context]
-             (if-let [token (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)
-                              (catch Exception e
-                                nil))]
-               (assoc context :token token)
-                 context))}))
+             (let [unsign (get-in context [:request :headers "authorization"])]
+               (if-let [ token (try (jwt/unsign unsign secret)
+                                    (catch Exception e
+                                      nil))]
+                 (do
+                   (send-off (:user-queue (:queue queue)) update-in [:users] conj {(:user token) unsign})
+                     (assoc-in context [:request :token] token))
+                 context)))}))
 
-(defn auth-interceptor
-  [db]
+(def auth-interceptor
   (interceptor
    {:name ::debug-inter
     :enter (fn [context]
              (let [query-selections (get-in context [:request :parsed-lacinia-query :selections])
                    auth-map (map (fn [x] (if x
-                                           (x access-level)
-                                           0))
-                                 (auth-walk2* query-selections))
-                   users-auth ((token-verify context) access-level)]
-               (clojure.pprint/pprint (auth-walk2* (-> context :request :parsed-lacinia-query :selections)))
+                                          (x access-level)
+                                          0))
+                                 (auth-walk query-selections))
+                   users-auth (token-verify (-> context :request :token))]
                (if (every? true? (map (fn [x] (<= x users-auth)) auth-map))
                  context
                  (assoc context :response
@@ -97,7 +67,7 @@
                          :access-level access-level
                          :user-id userid
                          :exp (time/plus (time/now) (time/minutes 6))} secret)]
-    (send-off (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
+    ;; (send-off (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
     token))
 
 

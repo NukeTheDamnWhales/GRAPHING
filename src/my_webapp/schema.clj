@@ -9,7 +9,8 @@
               [my-webapp.jwt :as auth]
               [buddy.sign.jwt :as jwt]
               [clojure.core.async :as a :refer [go go-loop <! >! <!! >!! chan sub pub close! unsub]]
-              [my-webapp.queue :as q]))
+              [my-webapp.queue :as q]
+              [clojure.pprint]))
 
 ;; Updated ones here and onwards
 

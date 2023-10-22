@@ -10,7 +10,7 @@
           (into [] (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
                                     "pass"
                                     (catch Exception e
-                                      (send queue update-in [:users] dissoc (get x 0))
+                                      (send-off queue update-in [:users] dissoc (get x 0))
                                       "fail"))))
                         current-queue)))
 
