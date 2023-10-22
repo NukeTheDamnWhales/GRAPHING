@@ -5,7 +5,8 @@
    [clj-time.core :as time]
    [io.pedestal.interceptor :refer [interceptor]]
    [com.walmartlabs.lacinia.pedestal.internal :as internal]
-   [my-webapp.db :as db]))
+   [my-webapp.db :as db]
+   [clojure.pprint]))
 
 (defonce token-time 10)
 (defonce secret "abc")
@@ -18,21 +19,41 @@
 (defn token-verify
   [context]
   (if-let
-      [token (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)]
-    (do (assoc context :token token)
-      (:access-level token))
+      [token (:token context)]
+    (keyword (:access-level token))
     :guest))
+
+;; (defn auth-walk2*
+;;   [selections]
+;;   (mapv #(reduce-kv (fn [m k v]
+;;                       (into m
+;;                             (cond
+;;                               (= :selections k) (auth-walk2* v)
+;;                               (= :field-definition k) (mapv (fn [x] (-> x :directive-args :role))
+;;                                                             (-> v :directives))))) [] %) selections))
+
+;; (defn auth-walk2*
+;;   [selections]
+;;   (prn (reduce (partial identity) selections))
+;;   (clojure.pprint/pprint ((juxt #(when-let [sel (:selections %)]
+;;                                    (auth-walk2* sel))
+;;                                 ;; (clojure.pprint/pprint %)(prn)
+;;                                 #(some-> % :field-definition :directives)) (pop selections))))
+
+(defn auth-walk2*
+  [selections]
+  (mapcat (fn [x]
+            (let [des ((juxt :field-definition :selections) x)]
+              (concat (some-> des pop peek :directives peek :directive-args vals)
+                      (some-> des peek auth-walk2*)))) selections))
 
 (defn auth-walk*
   [auth-map]
-  (flatten (map (fn [x] (if (:selections x)
-                         (cons (-> x
-                                   :field-definition
-                                   :directives)
-                               (auth-walk* (:selections x)))
-                         (-> x
-                             :field-definition
-                             :directives))) auth-map)))
+  (let [directives #(get-in % [:field-definition :directives])]
+    (flatten (map (fn [x] (if (:selections x)
+                           (cons (directives x)
+                                 (auth-walk* (:selections x)))
+                           (directives x))) auth-map))))
 
 (defn auth-walk
   [auth-map]
@@ -44,31 +65,24 @@
   (interceptor
    {:name ::token-inter
     :enter (fn [context]
-             (let [token (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)
+             (if-let [token (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) secret)
                               (catch Exception e
                                 nil))]
-               (if token
-                 (assoc context :token token)
-                 context)))}))
+               (assoc context :token token)
+                 context))}))
 
 (defn auth-interceptor
   [db]
   (interceptor
    {:name ::debug-inter
     :enter (fn [context]
-             (let [{{{query-selections
-                      :selections}
-                     :parsed-lacinia-query}
-                    :request} context
-                   auth-map
-                   (map (fn [x] (if x
-                                 (x access-level)
-                                 0)) (auth-walk query-selections))
-                   users-auth
-                   (try
-                     ((keyword (str (token-verify context))) access-level)
-                     (catch Exception e
-                       0))]
+             (let [query-selections (get-in context [:request :parsed-lacinia-query :selections])
+                   auth-map (map (fn [x] (if x
+                                           (x access-level)
+                                           0))
+                                 (auth-walk2* query-selections))
+                   users-auth ((token-verify context) access-level)]
+               (clojure.pprint/pprint (auth-walk2* (-> context :request :parsed-lacinia-query :selections)))
                (if (every? true? (map (fn [x] (<= x users-auth)) auth-map))
                  context
                  (assoc context :response
@@ -83,7 +97,7 @@
                          :access-level access-level
                          :user-id userid
                          :exp (time/plus (time/now) (time/minutes 6))} secret)]
-    (send (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
+    (send-off (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
     token))
 
 

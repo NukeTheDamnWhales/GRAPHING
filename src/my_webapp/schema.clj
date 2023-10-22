@@ -120,7 +120,7 @@
                           nil))]
       (if (= password actualpass)
         (do (when existing
-              (send (:user-queue (:queue queue)) assoc-in [:users (keyword (:user existing))] nil))
+              (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword (:user existing))] nil))
             (auth/create-claim username db queue))
         "error"))))
 
@@ -164,7 +164,7 @@
                                 (catch Exception e
                                   {:user nil}))]
       (if username
-        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil)
+        (do (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil)
             "Logged Out")
         "Not logged in"))))
 
