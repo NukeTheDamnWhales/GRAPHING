@@ -48,6 +48,24 @@
     :query "{LoggedInUsers}"
     :callback [::events/logged-in-users]}])
 
+(defn MessageSub
+  [x]
+  [::re-graph/subscribe
+   {:instance-id :b
+    :id :MessageSub
+    :query "($token: String){MessageSub(token: $token)}"
+    :variables {:token x}
+    :callback [::events/receive-message]}])
+
+(defn SendMessage
+  [[x y]]
+  [::re-graph/mutate
+   {:instance-id :a
+    :id :SendMessage
+    :query "($user: String $body: String) {SendMessage(user: $user message: $body)}"
+    :variables {:user x :body y}
+    :callback [::events/do-nothing]}])
+
 (def RefreshToken
   [::re-graph/mutate
    {:instance-id :a
@@ -69,7 +87,7 @@
     :callback [::events/do-nothing]}])
 
 (defn CreateUser
-  [x y]
+  [[x y]]
   [::re-graph/mutate
    {:instance-id :a
     :query "($username: String $password: String) {CreateUser(username: $username password: $password)}"
@@ -108,4 +126,12 @@
    ;; :id :CreateComment
     :query "($users: [Int] $board: Int) {AddMembers(users: $users board: $board) {... on User {id} ... on NotFoundAcceptableNull {message}}}"
     :variables {:users x :board y}
+    :callback [::events/do-nothing]}])
+
+(defn CreateBoard
+  [x]
+  [::re-graph/mutate
+   {:instance-id :a
+    :query "($title: String) {CreateBoard(title: $title)}"
+    :variables {:title x}
     :callback [::events/do-nothing]}])

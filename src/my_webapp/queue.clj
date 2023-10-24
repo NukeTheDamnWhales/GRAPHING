@@ -7,12 +7,12 @@
 
 (defn check-queue-token [queue]
   (let [current-queue (-> @queue :users)]
-          (into [] (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
-                                    "pass"
-                                    (catch Exception e
-                                      (send-off queue update-in [:users] dissoc (get x 0))
-                                      "fail"))))
-                        current-queue)))
+    (into [] (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
+                              "pass"
+                              (catch Exception e
+                                (send-off queue update-in [:users] dissoc (get x 0))
+                                "fail"))))
+          current-queue)))
 
 ;; (defn queue-checker [queue kill]
 ;;   (when (go (= "kill" (alts! [async/timeout 1000] kill)))))
@@ -35,7 +35,7 @@
       (go-loop []
         ;;(prn (. System (nanoTime)))
         (let [[n _] (alts!
-                     [(async/timeout 1000) kill-channel])]
+                     [(async/timeout 2000) kill-channel])]
           (check-queue-token user-queue)
           (if (= n "kill")
             nil

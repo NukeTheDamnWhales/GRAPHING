@@ -5,7 +5,9 @@
    [clj-time.core :as time]
    [io.pedestal.interceptor :refer [interceptor]]
    [com.walmartlabs.lacinia.pedestal.internal :as internal]
-   [my-webapp.db :as db]))
+   [my-webapp.db :as db]
+   [clojure.string :as string]
+   [clojure.pprint]))
 
 (defonce token-time 10)
 (defonce secret "abc")
@@ -29,18 +31,31 @@
               (concat (some-> des pop peek :directives peek :directive-args vals)
                       (some-> des peek auth-walk)))) selections))
 
+(def introspection-interceptor
+  (interceptor
+   {:name ::introspection-inter
+    :enter (fn [context]
+             (if (not-empty
+                  (re-seq
+                   #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
+                   (-> context :request :body)))
+               (assoc context :response
+                      (internal/failure-response
+                         (internal/message-as-errors "No Introspection !!! I mean it >:( ")))
+               context))}))
+
+
 (defn token-interceptor
   [queue]
   (interceptor
    {:name ::token-inter
     :enter (fn [context]
              (let [unsign (get-in context [:request :headers "authorization"])]
-               (if-let [ token (try (jwt/unsign unsign secret)
-                                    (catch Exception e
-                                      nil))]
-                 (do
-                   (send-off (:user-queue (:queue queue)) update-in [:users] conj {(:user token) unsign})
-                     (assoc-in context [:request :token] token))
+               (if-let [token (try (jwt/unsign unsign secret)
+                                   (catch Exception e
+                                     nil))]
+                 ;; (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword (:user token))] assoc unsign)
+                 (assoc-in context [:request :token] token)
                  context)))}))
 
 (def auth-interceptor
@@ -67,7 +82,7 @@
                          :access-level access-level
                          :user-id userid
                          :exp (time/plus (time/now) (time/minutes 6))} secret)]
-    ;; (send-off (:user-queue (:queue queue)) update-in [:users] conj {(keyword username) token})
+    (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword username)] token)
     token))
 
 

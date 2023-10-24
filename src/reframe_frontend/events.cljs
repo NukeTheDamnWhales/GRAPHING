@@ -121,5 +121,17 @@
      (reduce-kv (fn [m k v]
                   (assoc-in m [:current-post :GetPost :comments] (if (= :CreateComment k)
                                                                    (conj comments (k data))
-                                                                   (remove #(= v (:id %)) comments))))
-                db data))))
+                                                                   (remove #(= v (:id %)) comments)))) db data))))
+
+(re-frame/reg-event-db
+ ::send-message
+ (fn [db [_ x y]]
+   (assoc-in db [:send-message x] y)))
+
+(re-frame/reg-event-db
+ ::receive-message
+ (fn [db [_ x]]
+   (let [mes (-> x :response :data :MessageSub)]
+     (if mes
+       (update-in db [:receive-message] conj mes)
+       db))))

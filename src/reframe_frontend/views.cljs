@@ -87,28 +87,9 @@
 
 
 
-(defn create-user-panel []
-  (let [create-user (re-frame/subscribe [::subs/create-user-form])]
-    [:div
-     [:form {:onSubmit (fn [e]
-                         (let [{:keys [username password]} @create-user]
-                           (.preventDefault e)
-                           (re-frame/dispatch (graphql/CreateUser username password))))}
-      [:input {:type :text
-               :value (:username @create-user)
-               :on-change (fn [x]
-                            (re-frame/dispatch [::events/create-user :username (-> x .-target .-value)]))}]
-      [:input {:type :text
-               :value (:password @create-user)
-               :on-change (fn [x]
-                            (re-frame/dispatch [::events/create-user :password (-> x .-target .-value)]))}]
-      [:input {:type :submit :value "submit"}]]]))
-
-
-
 (defn boards-panel []
   (let [board (re-frame/subscribe [::subs/all-boards])]
-    (re-frame/dispatch (graphql/AddMembers [29 30 31] 1))
+    (re-frame/dispatch (graphql/AddMembers [10 11 13] 0))
     [:div.link-list
      (make-link-list :single-board @board)]))
 
@@ -167,6 +148,8 @@
       (when (not-empty children)
         (into [:ul] (map (fn [x] (make-comment-tree-hiccup x parent-id active-reply child-comment logged-in-user))) children))]]))
 
+
+
 ;; Need to modify this to traverse comments and make a tree
 ;; Also why the heck is the Comments form a lazy seq ?? probably because it returns derefs
 (defn post-panel []
@@ -217,6 +200,70 @@
       ]]))
 
 
+(defn make-input-form
+  [subs dispatch keyvec]
+  (let [[first-sub & rest-sub] subs
+        [submit-event updatef & submit-side-effects] dispatch
+        input-eventfun (fn [x y & r]
+                         (fn [s]
+                           (re-frame/dispatch [x y (-> s .-target .-value) (when r r)])))
+        sub1 (re-frame/subscribe [first-sub])
+        submit-eventf (fn [x]
+                        (fn [e]
+                          (.preventDefault e)
+                          (when (some? submit-side-effects)
+                            (map identity submit-side-effects))
+                          (re-frame/dispatch (submit-event x))))]
+    (fn []
+      [:div
+       (conj
+        (into [:form
+               {:onSubmit (submit-eventf (mapv (fn [x] (x @sub1)) keyvec))}]
+              (mapv (fn [field]
+                      [:input {:type :text
+                               :value (field @sub1)
+                               :on-change (input-eventfun updatef field)}])
+                    keyvec))
+        [:input {:type :submit :value "wtf"}])])))
+
+(defn make-datalist-form
+  [subs dispatch keyvec]
+  (let [[first-sub data-sub response-sub & rest-sub] subs
+        [submit-event updatef & submit-side-effects] dispatch
+        input-eventfun (fn [x y & r]
+                         (fn [s]
+                           (re-frame/dispatch [x y (-> s .-target .-value) (when r r)])))
+        sub1 (re-frame/subscribe [first-sub])
+        datasub (re-frame/subscribe [data-sub])
+        ressub (re-frame/subscribe [response-sub])
+        submit-eventf (fn [x]
+                        (fn [e]
+                          (.preventDefault e)
+                          (when (some? submit-side-effects)
+                            (map identity submit-side-effects))
+                          (re-frame/dispatch (submit-event x))))
+        [firstfield secondfield] keyvec]
+    (fn []
+      [:div
+       (conj (into [:datalist {:id "suggestions"}]
+                   (mapv (fn [field]
+                           [:option (get (string/split (str field) ":") 1)])
+                         (-> @datasub :LoggedInUsers))))
+       [:input {:autoComplete "on" :list "suggestions" :value (firstfield @sub1)
+                :on-change (input-eventfun updatef firstfield)}]
+       [:form
+        {:onSubmit (submit-eventf (mapv (fn [x] (x @sub1)) keyvec))}
+        [:input {:type :text
+                 :value (secondfield @sub1)
+                 :on-change (input-eventfun updatef secondfield)}]
+        [:input {:type :submit :value "send"}]]
+       (prn @ressub)
+       (when-let [messages @ressub]
+         (prn @ressub)
+         (prn messages)
+         (into [:header] (map (fn [x] [:a (str x)])) messages))])))
+
+
 
 (defn create-post-panel []
   (let [create-post (re-frame/subscribe [::subs/create-post])
@@ -246,9 +293,8 @@
           user-list (:LoggedInUsers @users)]
       [:header.logged-in "currently online:" [:div (str user-list)]])))
 
-
-
 ;; main
+
 
 
 (defn- panels [panel-name]
@@ -261,10 +307,11 @@
     :auth-panel [login-panel]
     :logout-panel [about-panel]
     :create-post-panel [create-post-panel]
-    :create-user-panel [create-user-panel]
+    :create-user-panel [(make-input-form [::subs/create-user-form]
+                         [graphql/CreateUser ::events/create-user]
+                         [:user :password])]
     :user-panel [user-panel]
     [:div "You are horribly horribly lost 🥲"]))
-
 
 
 (defn show-panel [panel-name]
@@ -274,7 +321,6 @@
 
 (defn main-panel []
   ;; Testing zone
-  ;; (re-frame/dispatch graphql/TheGodlyPickle)
   ;; -----------
   (js/setInterval
    (fn []
@@ -292,7 +338,14 @@
                                               :http {:impl (if @auth-reload
                                                              {:headers {"Authorization" @auth-reload}}
                                                              nil)} :ws nil}])
+      (when @auth-reload
+        (re-frame/dispatch (graphql/MessageSub (str @auth-reload))))
+  ;; (re-frame/dispatch (graphql/SendMessage "orgenborgen" "hi"))
       [:div
        [home-panel]
        [show-panel @active-panel]
-       [users-online]])))
+       [users-online]
+       ;; [messages]
+       [(make-datalist-form [::subs/send-message ::subs/logged-in-users ::subs/receive-message]
+                         [graphql/SendMessage ::events/send-message]
+                         [:user :body])]])))

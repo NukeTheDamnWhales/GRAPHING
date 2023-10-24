@@ -38,6 +38,7 @@
     lp/prepare-query-interceptor
     (lp/inject-app-context-interceptor app-context)
     auth/auth-interceptor
+    auth/introspection-interceptor
     ;; lp/enable-tracing-interceptor
     lp/query-executor-handler]))
 

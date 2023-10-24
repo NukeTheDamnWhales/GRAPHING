@@ -71,3 +71,13 @@
  ::active-reply
  (fn [db _]
    (:active-reply db)))
+
+(re-frame/reg-sub
+ ::send-message
+ (fn [db _]
+   (:send-message db)))
+
+(re-frame/reg-sub
+ ::receive-message
+ (fn [db _]
+   (:receive-message db)))

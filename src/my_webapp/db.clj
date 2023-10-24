@@ -64,6 +64,13 @@
                  ["insert into users (username, accesslevel, password, name) values (?, ?, ?, ?)" username "regular" password "jeff"])
   nil)
 
+(defn create-board
+  [component user title]
+  (prn user title)
+  (jdbc/execute! component
+                 ["insert into boards (owner, title) values (?, ?)" user title])
+  nil)
+
 (defn create-post-for-user
   [component user title text board]
   (jdbc/execute! component
@@ -170,21 +177,29 @@
       first
       remap-user))
 
+
 (defn add-users-to-board
   [component users board_id queue]
   (go (<! (-> queue :queue :using))
-      (let [user-records (mapv (fn [x] (-> x vals first)) (jdbc/query component ["select user_id from members where board_id = ?" board_id]))
+      (let [user-records
+            (mapv (fn [x] (:user_id x))
+                  (jdbc/query component ["select user_id from members where board_id = ?" board_id]))
             dedup (filterv (fn [x] (not (some #{x} user-records))) users)]
         (if (not-empty dedup)
-          (map remap-members
-               (try (let [ret (jdbc/insert-multi! component :members
-                                                  (mapv (fn [x] {:user_id x :board_id board_id}) dedup))]
-                      (>! (-> queue :queue :using) 1)
-                      ret)
-                    (catch Exception e
-                      "error")))
-          (do (>! (-> queue :queue :using) 1)
-           (schema/tag-with-type (list "duplicate or not authorized") :User))))))
+          (let [ret (try
+                      (jdbc/insert-multi! component :members
+                                          (mapv (fn [x] {:user_id x :board_id board_id}) dedup))
+                      (catch Exception e
+                        (prn e)
+                        "error"))]
+            (>! (-> queue :queue :using) 1)
+            (if (coll? ret)
+              (mapv remap-user ret)
+              ret))
+          (do
+            (>! (-> queue :queue :using) 1)
+            (schema/tag-with-type (list "duplicate or not authorized") :User))))))
+
 
 (defn get-all-boards
   [component]

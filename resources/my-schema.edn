@@ -116,7 +116,11 @@ will be used with context fields like a token"
     :User
     {:type :User
      :description "Get a user by token"
-     :args {}}}}
+     :args {}}
+
+    :SuperSpecialAPICall
+    {:type String
+     :description "Mobile Challenge"}}}
 
   :Mutation
   {:fields
@@ -128,6 +132,12 @@ will be used with context fields like a token"
       :title {:type (non-null String)}
       :body {:type (non-null String)}
       :board {:type (non-null Int)}}}
+
+    :CreateBoard
+    {:type String
+     :description "create a board"
+     :args
+     {:title {:type String}}}
 
     :RefreshToken
     {:type String
@@ -169,7 +179,15 @@ will be used with context fields like a token"
     {:type Int
      :description "Delete a comment"
      :args
-     {:id {:type (non-null Int)}}}}}
+     {:id {:type (non-null Int)}}}
+
+    :SendMessage
+    {:type String
+     :directives [{:directive-type :access
+                   :directive-args {:role :regular}}]
+     :args
+     {:user {:type String}
+      :message {:type String}}}}}
 
   :Subscription
   {:fields
@@ -179,4 +197,9 @@ will be used with context fields like a token"
 
     :TheGodlyPickle
     {:type String
-     :description "uhh"}}}}}
+     :description "uhh"}
+
+    :MessageSub
+    {:type (list String)
+     :args
+     {:token {:type (non-null String)}}}}}}}

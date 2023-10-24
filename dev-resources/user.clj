@@ -6,7 +6,7 @@
    [clojure.walk :as walk]
    [my-webapp.system :as system]
    [my-webapp.queue :refer :all]
-   [clojure.core.async :as a :refer [<!! >!! <! >! go chan]])
+   [clojure.core.async :as a :refer [<!! >!! <! >! go chan timeout]])
   (:import (clojure.lang IPersistentMap)))
 
 ;;; queue tester

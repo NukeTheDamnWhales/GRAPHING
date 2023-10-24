@@ -87,19 +87,26 @@
   (fn [_ _ post]
     (db/find-post-by-comment db (:post post))))
 
-
-(defn create-post
-  ;; insecure
+(defn create-board
   [db]
   (fn [context args _]
-    (let [{;; postid :postId
+    (let [{:keys [title]} args]
+      (if-let [user (-> context :request :token :user-id)]
+        (db/create-board db user title)
+        "error"))))
+
+
+(defn create-post
+  ;; insecure, check membership priv
+  [db]
+  (fn [context args _]
+    (let [{ ;; postid :postId
            title :title
            text :body
            board :board} args
-          user (try (:user-id (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))
-                    (catch Exception e
-                      nil))]
-      (if user
+          user (-> context :request :token :user-id)
+          board-members (db/find-user-by-board db board)]
+      (if (and user (some #{user} (mapv (fn [x] (:id x)) board-members)))
         (db/create-post-for-user db user title text board)
         "error"))))
 
@@ -116,12 +123,9 @@
   (fn [context args _]
     (let [{:keys [username password]} args
           actualpass (:password (db/find-user-by-username db username))
-          existing (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
-                        (catch Exception e
-                          nil))]
+          token (get-in (:request context) [:headers "authorization"])]
       (if (= password actualpass)
-        (do (when existing
-              (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword (:user existing))] nil))
+        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] token)
             (auth/create-claim username db queue))
         "error"))))
 
@@ -160,27 +164,34 @@
 (defn log-out
   [queue]
   (fn [context _ _]
-    (let [user (-> context :token :user)
-          {username :user} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
-                                (catch Exception e
-                                  {:user nil}))]
-      (if username
-        (do (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword username)] nil)
+    (let [user (-> context :request :token :user)
+          ;; {username :user} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+          ;;                       (catch Exception e
+          ;;                         {:user nil}))
+          ]
+      (if user
+        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword user)] nil)
             "Logged Out")
         "Not logged in"))))
 
 (defn add-members
   [db queue]
   (fn [context args _]
-    (let [{user-id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
-                  (catch Exception e
-                    {:user-id nil}))
+    (let [user-id (-> context :request :token :user-id)
           {:keys [users board]} args
           selected-board-owner (:owner (db/find-board-by-id db board))]
       (if (= user-id selected-board-owner)
         (db/add-users-to-board db users board queue)
-        "error")
-      )))
+        (mapv (fn [x] {:id x :user "could not add"}) users)))))
+
+(defn send-message
+  [messages]
+  (fn [context args _]
+    (let [to-send (:messages (:messages messages))]
+      (go (>! to-send {:messages {:user (:user args)
+                                  :message (:message args)
+                                  :from (-> context :request :token :user)}})))
+    "sent"))
 
 (defn super-subscription
   []
@@ -206,18 +217,55 @@
          (prn "Connection Closed")
          (unsub (:streamer (:queue queue)) :user-listener out)))))
 
+
+(defn louise-api-call
+  []
+  (fn [context _ _]
+    (let [token (get-in context [:request :headers "authorization"])]
+      (if (= token "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJCcmlnZyBXaWdzIiwibmFtZSI6IkJyaWdnIFdpZ3MifQ.Dt9m5qzD83WGbbT13hSXtLH_AQnWtacXj8dPwQDLKok")
+        "flag-{My_compressed_H3art_ACC3SS_GRANT#D**}"
+        "error :'-("))))
+
+
+(defn message-sub
+  [messages queue]
+  (fn [_ args source-stream]
+    (let [send-own (:sources (:messages messages))
+          return (chan 1)
+          ;; not huge on this :/
+          username (try (:user (jwt/unsign (:token args) "abc"))
+                        (catch Exception e
+                          nil))]
+      (when username
+        (>!! send-own {:sources {:user username :channel return :token (:token args)}}))
+      (go-loop [to-return (<! return)]
+        (if (or (= to-return "kill")
+                (nil? to-return))
+          to-return
+          (do
+            (if-let [his (:history to-return)]
+              (-> his source-stream)
+              (-> (list to-return) source-stream))
+            (recur (<! return)))))
+      #(>!! send-own {:sources {:user username :channel nil}})
+           ;; (send (-> :queue :user-queue) assoc-in [:users (keyword username)] nil)
+           )))
+
 (defn streamer-map
   [component]
-  (let [queue (:queue component)]
+  (let [queue (:queue component)
+        messages (:messages component)]
     {:Subscription/LoggedInUsers (online-users queue)
      :Subscription/TheGodlyPickle (super-subscription)
+     :Subscription/MessageSub (message-sub messages queue)
      }))
 
 
 (defn resolver-map
   [component]
   (let [db (:db component)
-        queue (:queue component)]
+        queue (:queue component)
+        messages (:messages component)]
     {:Query/GetUser (user-by-id db)
      :Query/UserByUsername (user-by-username db)
      :Query/GetPost (post-by-id db)
@@ -226,6 +274,8 @@
      :Query/PostsByBoard (posts-by-board db)
      :Query/CommentsByPost (post-to-comment db)
      :Query/UserByToken (user-by-token db)
+     :Query/SuperSpecialAPICall (louise-api-call)
+     :Mutation/CreateBoard (create-board db)
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db queue)
@@ -234,6 +284,7 @@
      :Mutation/CreateComment (create-comment db)
      :Mutation/DeleteComment (delete-comment db)
      :Mutation/AddMembers (add-members db queue)
+     :Mutation/SendMessage (send-message messages)
      :Board/members (board-to-user db)
      :Board/owner (board-to-owner db)
      :Comment/post (comment-to-post db)
@@ -255,7 +306,7 @@
     ;; {:normal (schema/compile uncompiled {:enable-introspection? false}) "ws" (schema/compile uncompiled)}
     uncompiled))
 
-(defrecord SchemaProvider [db schema queue]
+(defrecord SchemaProvider [db schema queue messages]
 
   component/Lifecycle
 
