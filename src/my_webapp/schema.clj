@@ -98,6 +98,7 @@
 
 (defn create-post
   ;; insecure, check membership priv
+  ;; Need to also make sure can create posts on public boards
   [db]
   (fn [context args _]
     (let [{ ;; postid :postId
@@ -106,7 +107,10 @@
            board :board} args
           user (-> context :request :token :user-id)
           board-members (db/find-user-by-board db board)]
-      (if (and user (some #{user} (mapv (fn [x] (:id x)) board-members)))
+      ;;below will verify you are in members, just need to also allow
+      ;;on public and on boards created by user
+      ;;(some #{user} (mapv (fn [x] (:id x)) board-members))
+      (if user
         (db/create-post-for-user db user title text board)
         "error"))))
 

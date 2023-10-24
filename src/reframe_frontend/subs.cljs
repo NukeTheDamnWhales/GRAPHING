@@ -81,3 +81,8 @@
  ::receive-message
  (fn [db _]
    (:receive-message db)))
+
+(re-frame/reg-sub
+ ::create-board
+ (fn [db ]
+   (:create-board db)))

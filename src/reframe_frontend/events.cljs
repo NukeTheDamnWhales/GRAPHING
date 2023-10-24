@@ -95,6 +95,12 @@
    (assoc-in db [:create-user x] y)))
 
 (re-frame/reg-event-db
+ ::create-board
+ (fn [db [_ x]]
+   (prn x)
+   (assoc db :create-board x)))
+
+(re-frame/reg-event-db
  ::user-info
  [re-frame/unwrap]
  (fn [db {:keys [response]}]

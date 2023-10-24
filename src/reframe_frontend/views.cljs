@@ -85,12 +85,48 @@
                             (re-frame/dispatch [::events/login-panel :password (-> x .-target .-value)]))}]
       [:input {:type :submit :value "submit"}]]]))
 
-
+(defn make-input-form
+  [subs dispatch keyvec]
+  (let [[first-sub & rest-sub] subs
+        [submit-event updatef & submit-side-effects] dispatch
+        input-eventfun (fn [x y & r]
+                         (fn [s]
+                           (re-frame/dispatch (if (nil? y)
+                                                [x (-> s .-target .-value)]
+                                                [x y (-> s .-target .-value) (when r r)]))))
+        sub1 (re-frame/subscribe [first-sub])
+        submit-eventf (fn [x]
+                        (fn [e]
+                          (.preventDefault e)
+                          (when (some? submit-side-effects)
+                            (map identity submit-side-effects))
+                          (re-frame/dispatch (submit-event x))))]
+    (fn []
+      [:div
+       (conj
+        (into [:form
+               {:onSubmit (submit-eventf (if (= 1 (count keyvec))
+                                           @sub1
+                                           (mapv (fn [x] (x @sub1)) keyvec)))}]
+              (mapv (fn [field]
+                      [:input {:type :text
+                               :value (if (= 1 (count keyvec))
+                                        @sub1
+                                        (field @sub1))
+                               :on-change (if (= 1 (count keyvec))
+                                            (input-eventfun updatef nil)
+                                            (input-eventfun updatef field))}])
+                    keyvec))
+        [:input {:type :submit :value "submit"}])])))
 
 (defn boards-panel []
   (let [board (re-frame/subscribe [::subs/all-boards])]
-    (re-frame/dispatch (graphql/AddMembers [10 11 13] 0))
+    ;; (re-frame/dispatch (graphql/AddMembers [10 11 13] 0))
     [:div.link-list
+     [:header "Create a new Board"
+      [(make-input-form [::subs/create-board]
+                        [graphql/CreateBoard ::events/create-board]
+                        [:title])]]
      (make-link-list :single-board @board)]))
 
 
@@ -200,32 +236,6 @@
       ]]))
 
 
-(defn make-input-form
-  [subs dispatch keyvec]
-  (let [[first-sub & rest-sub] subs
-        [submit-event updatef & submit-side-effects] dispatch
-        input-eventfun (fn [x y & r]
-                         (fn [s]
-                           (re-frame/dispatch [x y (-> s .-target .-value) (when r r)])))
-        sub1 (re-frame/subscribe [first-sub])
-        submit-eventf (fn [x]
-                        (fn [e]
-                          (.preventDefault e)
-                          (when (some? submit-side-effects)
-                            (map identity submit-side-effects))
-                          (re-frame/dispatch (submit-event x))))]
-    (fn []
-      [:div
-       (conj
-        (into [:form
-               {:onSubmit (submit-eventf (mapv (fn [x] (x @sub1)) keyvec))}]
-              (mapv (fn [field]
-                      [:input {:type :text
-                               :value (field @sub1)
-                               :on-change (input-eventfun updatef field)}])
-                    keyvec))
-        [:input {:type :submit :value "wtf"}])])))
-
 (defn make-datalist-form
   [subs dispatch keyvec]
   (let [[first-sub data-sub response-sub & rest-sub] subs
@@ -257,11 +267,8 @@
                  :value (secondfield @sub1)
                  :on-change (input-eventfun updatef secondfield)}]
         [:input {:type :submit :value "send"}]]
-       (prn @ressub)
        (when-let [messages @ressub]
-         (prn @ressub)
-         (prn messages)
-         (into [:header] (map (fn [x] [:a (str x)])) messages))])))
+         (into [:header] (map (fn [x] (prn x) (prn)[:a (str x)])) messages))])))
 
 
 
@@ -287,11 +294,14 @@
 
 
 (defn users-online []
-  (re-frame/dispatch graphql/OnlineUsers)
-  (fn []
-    (let [users (re-frame/subscribe [::subs/logged-in-users])
-          user-list (:LoggedInUsers @users)]
-      [:header.logged-in "currently online:" [:div (str user-list)]])))
+  (let [online (re-frame/subscribe [::subs/auth-sub])]
+    (if (nil? @online)
+      (re-frame/dispatch [::re-graph/unsubscribe {:id :MessageSub}])
+      (re-frame/dispatch graphql/OnlineUsers))
+    (fn []
+      (let [users (re-frame/subscribe [::subs/logged-in-users])
+            user-list (:LoggedInUsers @users)]
+        [:header.logged-in "currently online:" [:div (str user-list)]]))))
 
 ;; main
 
@@ -338,7 +348,9 @@
                                               :http {:impl (if @auth-reload
                                                              {:headers {"Authorization" @auth-reload}}
                                                              nil)} :ws nil}])
-      (when @auth-reload
+      (prn @auth-reload)
+      (if (nil? @auth-reload)
+        (re-frame/dispatch [::re-graph/unsubscribe {:id :MessageSub}])
         (re-frame/dispatch (graphql/MessageSub (str @auth-reload))))
   ;; (re-frame/dispatch (graphql/SendMessage "orgenborgen" "hi"))
       [:div
@@ -347,5 +359,5 @@
        [users-online]
        ;; [messages]
        [(make-datalist-form [::subs/send-message ::subs/logged-in-users ::subs/receive-message]
-                         [graphql/SendMessage ::events/send-message]
-                         [:user :body])]])))
+                            [graphql/SendMessage ::events/send-message]
+                            [:user :body])]])))
