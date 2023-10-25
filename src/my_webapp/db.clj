@@ -66,7 +66,6 @@
 
 (defn create-board
   [component user title]
-  (prn user title)
   (jdbc/execute! component
                  ["insert into boards (owner, title) values (?, ?)" user title])
   nil)
@@ -190,7 +189,6 @@
                       (jdbc/insert-multi! component :members
                                           (mapv (fn [x] {:user_id x :board_id board_id}) dedup))
                       (catch Exception e
-                        (prn e)
                         "error"))]
             (>! (-> queue :queue :using) 1)
             (if (coll? ret)

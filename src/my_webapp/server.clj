@@ -5,7 +5,9 @@
             [my-webapp.jwt :as auth]
             [io.pedestal.interceptor :refer [interceptor]]
             [com.walmartlabs.lacinia.pedestal.internal :as internal]
-            [com.walmartlabs.lacinia.executor :as executor]))
+            [com.walmartlabs.lacinia.executor :as executor]
+            [clojure.core.async :as async :refer [put! close!]]
+            [com.walmartlabs.lacinia.pedestal.subscriptions :as inter :refer :all]))
 
 (def ^:private default-api-path "/api")
 (def ^:private default-asset-path "/assets/graphiql")
@@ -42,15 +44,43 @@
     ;; lp/enable-tracing-interceptor
     lp/query-executor-handler]))
 
+(def check-introspection
+  (interceptor
+   {:name ::check-introspection
+    :leave (fn [context]
+             (prn "made it")
+             (let [{:keys [response-data-ch]} (:request context)]
+               (when (not-empty
+                      (re-seq
+                       #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
+                       (get-in context [:request :query])))
+                 (put! response-data-ch {:type :message
+                                         :payload "flag{AThoughtfulPickle}"})
+                 ;; (close! response-data-ch)
+                 ))
+             (prn "made it out")
+             context)}))
+
+(defn my-subscription-interceptors
+  [compiled-schema app-context]
+  [inter/exception-handler-interceptor
+   inter/send-operation-response-interceptor
+   (inter/query-parser-interceptor compiled-schema)
+   check-introspection
+   (inter/inject-app-context-interceptor app-context)
+   inter/execute-operation-interceptor])
+
 (defn my-service
   [compiled-schema db queue options]
-  (let [{:keys [api-path ide-path asset-path app-context port host]
+  (let [{:keys [api-path ide-path asset-path app-context port host subscription-interceptors]
          :or {api-path default-api-path
               ide-path "/ide"
               asset-path default-asset-path
               port 8888
-              host default-host-address}} options
+              host default-host-address
+              subscription-interceptors (my-subscription-interceptors compiled-schema app-context)}} options
         interceptors (default-interceptors compiled-schema app-context options db queue)
+        ;; subscription-interceptors (my-subscription-interceptors compiled-schema app-context)
         routes (into #{[api-path :post interceptors :route-name ::graphql-api]
                        [ide-path :get (lp/graphiql-ide-handler options) :route-name ::graphiql-ide]}
                      (lp/graphiql-asset-routes asset-path))]
@@ -61,7 +91,9 @@
          ::http/type :jetty
          ::http/join? false}
         lp/enable-graphiql
-        (lp/enable-subscriptions compiled-schema options))))
+        (lp/enable-subscriptions compiled-schema options
+                                 ;; {:subscription-interceptors subscription-interceptors}
+                                 ))))
 
 (defrecord Server [schema-provider server queue]
 

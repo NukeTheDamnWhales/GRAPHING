@@ -12,7 +12,10 @@
 
  :unions
  {:NotFoundAcceptableNullUNION
-  {:members [:User :NotFoundAcceptableNull]}}
+  {:members [:User :NotFoundAcceptableNull]}
+
+  :flagenum
+  {:members [:flagenumobject :User]}}
 
  :objects
  {:NotFoundAcceptableNull
@@ -20,6 +23,18 @@
 will be used with context fields like a token"
    :fields
    {:message {:type String}}}
+
+  :flagenumobject
+  {:description "the flag enum object"
+   :fields
+   {:message {:type String}}}
+
+  :flagCURLYBRACKETNosyPickleEnthusiastCLOSINGCURLYBRACKET
+  {:description "Well, you know. Also sorry I didn't want to make my schema
+read curly brackets but sub those in!!"
+   :fields
+   {:anothersuprise {:type String}
+    :howaboutme {:type :flagenum}}}
 
   :User
   {:description "A user object"
@@ -36,13 +51,20 @@ will be used with context fields like a token"
                              :directive-args {:role :admin}}]}
     :accessLevel {:type (non-null :Access)}}}
 
+  :Message
+  {:description "a user message"
+   :fields
+   {:from {:type (non-null String)}
+    :message {:type (non-null String)}}}
+
   :Board
   {:description "different forum boards"
    :fields
    {:id {:type (non-null Int)}
     :owner {:type :User}
     :members {:type (list :User)}
-    :title {:type (non-null String)}}}
+    :title {:type (non-null String)}
+    :specialsuprise {:type :flagCURLYBRACKETNosyPickleEnthusiastCLOSINGCURLYBRACKET}}}
 
   :Post
   {:description "A text post by a user"
@@ -186,8 +208,8 @@ will be used with context fields like a token"
      :directives [{:directive-type :access
                    :directive-args {:role :regular}}]
      :args
-     {:user {:type String}
-      :message {:type String}}}}}
+     {:user {:type (non-null String)}
+      :message {:type (non-null String)}}}}}
 
   :Subscription
   {:fields
@@ -200,6 +222,6 @@ will be used with context fields like a token"
      :description "uhh"}
 
     :MessageSub
-    {:type (list String)
+    {:type :Message
      :args
      {:token {:type (non-null String)}}}}}}}

@@ -1,6 +1,9 @@
 (ns reframe-frontend.events
   (:require [re-frame.core :as re-frame]
-            [re-graph.core :as re-graph]))
+            [re-graph.core :as re-graph]
+            [cljs.reader :as reader]
+            [clojure.walk :as walk]
+            [clojure.string :as string]))
 
 (re-frame/reg-event-db
  ::set-active-panel
@@ -40,11 +43,11 @@
  (fn [db {:keys [response]}]
    (let [{:keys [data errors]} response
          jwt (first (vals data))]
-     (if (or errors (= (:RefreshToken data) "error"))
+     (if (= (:RefreshToken data) "error")
        ;; (do
-       ;;   ;; (.clear (.-localStorage js/window))
+       ;;   (.clear (.-localStorage js/window))
        ;;   (dissoc db :authorization))
-       db
+      db
        (do
          (.setItem (.-localStorage js/window) "Authorization" jwt)
          (assoc db :authorization jwt))))))
@@ -53,9 +56,13 @@
  ::reload-auth
  (fn [db [_ x]]
    (let [authorization (.getItem (.-localStorage js/window) "Authorization")]
-     (if (= authorization "error")
+     (if (or (= authorization "error") (not (try (into {}
+                                                       (mapv (fn [x] (-> x js/atob (string/replace #":" "") (reader/read-string) walk/keywordize-keys))
+                                                             (pop (string/split authorization "."))))
+                                                 (catch js/Error e
+                                                   nil))))
        ;; (.clear (.-localStorage js/window))
-         db
+       db
        (assoc db :authorization authorization)))))
 
 (re-frame/reg-event-db
@@ -141,3 +148,8 @@
      (if mes
        (update-in db [:receive-message] conj mes)
        db))))
+
+(re-frame/reg-event-db
+ ::clear-messages
+ (fn [db]
+   (dissoc db :receive-message)))

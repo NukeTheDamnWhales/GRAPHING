@@ -51,7 +51,8 @@
       :post-panel
       (re-frame/dispatch (graphql/GetPost (:id (:route-params matched-route))))
       :logout-panel
-      (re-frame/dispatch graphql/LogOut)
+      (do (re-frame/dispatch [::events/clear-messages])
+          (re-frame/dispatch graphql/LogOut))
       :user-panel
       (re-frame/dispatch graphql/UserByToken)
       nil)))

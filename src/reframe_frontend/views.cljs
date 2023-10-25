@@ -97,10 +97,11 @@
         sub1 (re-frame/subscribe [first-sub])
         submit-eventf (fn [x]
                         (fn [e]
+                          (prn submit-side-effects)
                           (.preventDefault e)
+                          (re-frame/dispatch (submit-event x))
                           (when (some? submit-side-effects)
-                            (map identity submit-side-effects))
-                          (re-frame/dispatch (submit-event x))))]
+                            (re-frame/dispatch (first submit-side-effects)))))]
     (fn []
       [:div
        (conj
@@ -125,7 +126,7 @@
     [:div.link-list
      [:header "Create a new Board"
       [(make-input-form [::subs/create-board]
-                        [graphql/CreateBoard ::events/create-board]
+                        [graphql/CreateBoard ::events/create-board graphql/GetAllBoards]
                         [:title])]]
      (make-link-list :single-board @board)]))
 
@@ -255,12 +256,13 @@
         [firstfield secondfield] keyvec]
     (fn []
       [:div
-       (conj (into [:datalist {:id "suggestions"}]
+       (conj (into [:select {:id "suggestions" :value (firstfield @sub1)
+                             :on-change (input-eventfun updatef firstfield)}]
                    (mapv (fn [field]
                            [:option (get (string/split (str field) ":") 1)])
                          (-> @datasub :LoggedInUsers))))
-       [:input {:autoComplete "on" :list "suggestions" :value (firstfield @sub1)
-                :on-change (input-eventfun updatef firstfield)}]
+       ;; [:input {:autoComplete "on" :list "suggestions" :value (firstfield @sub1)
+       ;;          :on-change (input-eventfun updatef firstfield)}]
        [:form
         {:onSubmit (submit-eventf (mapv (fn [x] (x @sub1)) keyvec))}
         [:input {:type :text
@@ -268,7 +270,8 @@
                  :on-change (input-eventfun updatef secondfield)}]
         [:input {:type :submit :value "send"}]]
        (when-let [messages @ressub]
-         (into [:header] (map (fn [x] (prn x) (prn)[:a (str x)])) messages))])))
+         (into [:header] (map (fn [x] (prn x)
+                                [:a (str x)])) messages))])))
 
 
 
@@ -294,14 +297,16 @@
 
 
 (defn users-online []
-  (let [online (re-frame/subscribe [::subs/auth-sub])]
-    (if (nil? @online)
-      (re-frame/dispatch [::re-graph/unsubscribe {:id :MessageSub}])
-      (re-frame/dispatch graphql/OnlineUsers))
-    (fn []
-      (let [users (re-frame/subscribe [::subs/logged-in-users])
-            user-list (:LoggedInUsers @users)]
-        [:header.logged-in "currently online:" [:div (str user-list)]]))))
+  (re-frame/dispatch graphql/OnlineUsers)
+  (fn []
+    (let [users (re-frame/subscribe [::subs/logged-in-users])
+          user-list (:LoggedInUsers @users)]
+        ;; (nil? @online)
+        ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
+
+        ;; (re-frame/dispatch graphql/OnlineUsers)
+        ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
+      [:header.logged-in "currently online:" [:div (str user-list)]])))
 
 ;; main
 
@@ -338,18 +343,18 @@
        (re-frame/dispatch graphql/RefreshToken)
        nil))
    (* 2 60 1000))
-  (re-frame/dispatch [::events/reload-auth])
 
   (fn []
     (let [active-panel (re-frame/subscribe [::subs/active-panel])
           auth-reload (re-frame/subscribe [::subs/auth-sub])]
       ;; Reload auth key on all changes to auth db (stored in localstorage)
+      (re-frame/dispatch [::events/reload-auth])
       (re-frame/dispatch [::re-graph/re-init {:instance-id :a
                                               :http {:impl (if @auth-reload
                                                              {:headers {"Authorization" @auth-reload}}
                                                              nil)} :ws nil}])
-      (prn @auth-reload)
-      (if (nil? @auth-reload)
+      (if (and (nil? @auth-reload) (not= "null" @auth-reload))
+        ;; (re-frame/dispatch [::events/clear-messages])
         (re-frame/dispatch [::re-graph/unsubscribe {:id :MessageSub}])
         (re-frame/dispatch (graphql/MessageSub (str @auth-reload))))
   ;; (re-frame/dispatch (graphql/SendMessage "orgenborgen" "hi"))

@@ -7,11 +7,12 @@
 
 (defn check-queue-token [queue]
   (let [current-queue (-> @queue :users)]
-    (into [] (map (fn [x] (try (jwt/unsign (get x 1) auth/secret)
-                              "pass"
-                              (catch Exception e
-                                (send-off queue update-in [:users] dissoc (get x 0))
-                                "fail"))))
+    (into [] (map (fn [x]
+                    (try (jwt/unsign (get x 1) auth/secret)
+                         "pass"
+                         (catch Exception e
+                           (send queue update-in [:users] dissoc (get x 0))
+                           "fail"))))
           current-queue)))
 
 ;; (defn queue-checker [queue kill]
@@ -23,7 +24,7 @@
   component/Lifecycle
 
   (start [this]
-    (let [in (chan 1)
+    (let [in (chan 20)
           using (chan 1)
           streamer (pub in :online-users)
           user-queue (agent {:users {}})
@@ -46,8 +47,11 @@
   (stop [this]
     (when-let [{in :in user-queue :user-queue kill-channel :kill-channel using :using} (:queue this)]
       (>!! kill-channel "kill")
+      (prn "we are blocking here")
       (close! using)
+      (prn "we are blocking here 2")
       (close! kill-channel)
+      (prn "we are blocking here 3")
       (remove-watch user-queue :user-queue)
       (close! in)
       (send user-queue assoc-in [:users] {}))

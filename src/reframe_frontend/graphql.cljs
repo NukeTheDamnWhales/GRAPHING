@@ -53,7 +53,7 @@
   [::re-graph/subscribe
    {:instance-id :b
     :id :MessageSub
-    :query "($token: String){MessageSub(token: $token)}"
+    :query "($token: String){MessageSub(token: $token) {message from}}"
     :variables {:token x}
     :callback [::events/receive-message]}])
 

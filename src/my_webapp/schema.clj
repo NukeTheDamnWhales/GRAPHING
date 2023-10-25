@@ -101,16 +101,17 @@
   ;; Need to also make sure can create posts on public boards
   [db]
   (fn [context args _]
-    (let [{ ;; postid :postId
+    (let [{;; postid :postId
            title :title
            text :body
            board :board} args
           user (-> context :request :token :user-id)
-          board-members (db/find-user-by-board db board)]
+          board-members (mapv #(:id %) (db/find-user-by-board db board))
+          owner (:owner (db/find-board-by-id db board))]
       ;;below will verify you are in members, just need to also allow
       ;;on public and on boards created by user
       ;;(some #{user} (mapv (fn [x] (:id x)) board-members))
-      (if user
+      (if (or (some #{user} board-members) (empty? board-members) (= user owner))
         (db/create-post-for-user db user title text board)
         "error"))))
 
@@ -127,10 +128,14 @@
   (fn [context args _]
     (let [{:keys [username password]} args
           actualpass (:password (db/find-user-by-username db username))
-          token (get-in (:request context) [:headers "authorization"])]
+          ex-token-user (-> context :request :token :user)
+          token (auth/create-claim username db queue)]
       (if (= password actualpass)
-        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] token)
-            (auth/create-claim username db queue))
+        (do
+          (when (not (= ex-token-user username))
+            (send (:user-queue (:queue queue)) update-in [:users] dissoc (keyword username)))
+          (send (:user-queue (:queue queue)) assoc-in [:users (keyword username)] token)
+          token)
         "error"))))
 
 (defn create-user
@@ -166,7 +171,7 @@
 ;; (update-in context [:response :headers] (conj headers "Set-Cookie"
 ;;                                               (str (auth/create-claim username db) "; " "HttpOnly"),))
 (defn log-out
-  [queue]
+  [queue messages]
   (fn [context _ _]
     (let [user (-> context :request :token :user)
           ;; {username :user} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
@@ -174,8 +179,12 @@
           ;;                         {:user nil}))
           ]
       (if user
-        (do (send (:user-queue (:queue queue)) assoc-in [:users (keyword user)] nil)
-            "Logged Out")
+        (do
+          (prn "we are fucked here")
+          (a/put! (-> messages :messages :messages) {:killing user})
+          (prn "we are less fucked and logged out")
+          (send (:user-queue (:queue queue)) assoc-in [:users (keyword user)] nil)
+          "Logged Out")
         "Not logged in"))))
 
 (defn add-members
@@ -212,11 +221,12 @@
         (-> (list "no one here !") source-stream))
       (sub (:streamer (:queue queue)) :user-listener out)
       (go-loop []
-        (let [to-push (-> (<! out) :data :users keys)]
-          (if to-push
-            (-> to-push source-stream)
-            (-> (list "no one here !") source-stream)))
-        (recur))
+        (let
+         [n (<! out)]
+          (if (not n)
+            (-> (list "no one here !") source-stream)
+            (do (-> n :data :users keys source-stream)
+                (recur)))))
       #(do
          (prn "Connection Closed")
          (unsub (:streamer (:queue queue)) :user-listener out)))))
@@ -242,18 +252,27 @@
                           nil))]
       (when username
         (>!! send-own {:sources {:user username :channel return :token (:token args)}}))
-      (go-loop [to-return (<! return)]
-        (if (or (= to-return "kill")
-                (nil? to-return))
-          to-return
-          (do
-            (if-let [his (:history to-return)]
-              (-> his source-stream)
-              (-> (list to-return) source-stream))
-            (recur (<! return)))))
-      #(>!! send-own {:sources {:user username :channel nil}})
+      (go-loop [{:keys [from message]} (<! return)]
+        (let [to-return {:message message :from from}]
+          (if (nil? from)
+            nil
+            (do
+              (-> to-return source-stream)
+                ;; (if-let [his (:history to-return)]
+                ;;   (-> his source-stream)
+                ;;   (-> (list to-return) source-stream))
+              (recur (<! return))))))
+      #(prn "message sub closed")
            ;; (send (-> :queue :user-queue) assoc-in [:users (keyword username)] nil)
-           )))
+      )))
+
+(defn flag-returner
+  [_ _ _]
+  {:anothersuprise "flag{WhyMustILearnGraphQL}"})
+
+(defn enum-flag-returner
+  [_ _ _]
+  (schema/tag-with-type {:message "flag{WhatAStrangeSyntax}"} :flagenumobject))
 
 (defn streamer-map
   [component]
@@ -283,7 +302,7 @@
      :Mutation/CreatePost (create-post db)
      :Mutation/LogIn (login db queue)
      :Mutation/RefreshToken (refresh-token db queue)
-     :Mutation/LogOut (log-out queue)
+     :Mutation/LogOut (log-out queue messages)
      :Mutation/CreateUser (create-user db)
      :Mutation/CreateComment (create-comment db)
      :Mutation/DeleteComment (delete-comment db)
@@ -291,7 +310,9 @@
      :Mutation/SendMessage (send-message messages)
      :Board/members (board-to-user db)
      :Board/owner (board-to-owner db)
+     :Board/specialsuprise flag-returner
      :Comment/post (comment-to-post db)
+     :flagCURLYBRACKETNosyPickleEnthusiastCLOSINGCURLYBRACKET/howaboutme enum-flag-returner
      :Post/user (post-to-user db)
      :Post/comments (post-to-comment db)
      :Comment/user (comment-to-user db)
@@ -310,7 +331,7 @@
     ;; {:normal (schema/compile uncompiled {:enable-introspection? false}) "ws" (schema/compile uncompiled)}
     uncompiled))
 
-(defrecord SchemaProvider [db schema queue messages]
+(defrecord SchemaProvider [schema db queue messages]
 
   component/Lifecycle
 

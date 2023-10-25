@@ -3,6 +3,7 @@
    [cheshire.core :as cheshire]
    [buddy.sign.jwt :as jwt]
    [clj-time.core :as time]
+   [clojure.core.async :as async :refer [put!]]
    [io.pedestal.interceptor :refer [interceptor]]
    [com.walmartlabs.lacinia.pedestal.internal :as internal]
    [my-webapp.db :as db]
@@ -35,14 +36,15 @@
   (interceptor
    {:name ::introspection-inter
     :enter (fn [context]
-             (if (not-empty
-                  (re-seq
-                   #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
-                   (-> context :request :body)))
-               (assoc context :response
-                      (internal/failure-response
-                         (internal/message-as-errors "No Introspection !!! I mean it >:( ")))
-               context))}))
+             (let [{:keys [id response-data-ch body]} (:request context)]
+               (when (not-empty
+                    (re-seq
+                     #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
+                     body))
+                 (put! response-data-ch {:type :flag
+                                         :id id
+                                         :payload "on the right track"})))
+             context)}))
 
 
 (defn token-interceptor
@@ -56,7 +58,11 @@
                                      nil))]
                  ;; (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword (:user token))] assoc unsign)
                  (assoc-in context [:request :token] token)
-                 context)))}))
+                 context)))
+    :leave (fn [context]
+             (prn "we are here hopefully???")
+             (prn "yessir")
+             context)}))
 
 (def auth-interceptor
   (interceptor
