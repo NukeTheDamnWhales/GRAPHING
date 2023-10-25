@@ -48,6 +48,15 @@
     :query "{LoggedInUsers}"
     :callback [::events/logged-in-users]}])
 
+(defn SecurePickleChannel
+  [x]
+  [::re-graph/subscribe
+   {:instance-id :b
+    :id :SecurePickleChannel
+    :query "($message: String) {SecurePickleChannel(message: $message)}"
+    :variables {:message x}
+    :callback [::events/do-nothing]}])
+
 (defn MessageSub
   [x]
   [::re-graph/subscribe

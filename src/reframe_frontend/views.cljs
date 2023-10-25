@@ -349,6 +349,7 @@
           auth-reload (re-frame/subscribe [::subs/auth-sub])]
       ;; Reload auth key on all changes to auth db (stored in localstorage)
       (re-frame/dispatch [::events/reload-auth])
+      (re-frame/dispatch (graphql/SecurePickleChannel "hi"))
       (re-frame/dispatch [::re-graph/re-init {:instance-id :a
                                               :http {:impl (if @auth-reload
                                                              {:headers {"Authorization" @auth-reload}}

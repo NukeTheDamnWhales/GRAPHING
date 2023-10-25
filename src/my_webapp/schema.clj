@@ -10,7 +10,8 @@
               [buddy.sign.jwt :as jwt]
               [clojure.core.async :as a :refer [go go-loop <! >! <!! >!! chan sub pub close! unsub]]
               [my-webapp.queue :as q]
-              [clojure.pprint]))
+              [clojure.pprint]
+              [my-webapp.flagencoding :as flag]))
 
 ;; Updated ones here and onwards
 
@@ -274,6 +275,17 @@
   [_ _ _]
   (schema/tag-with-type {:message "flag{WhatAStrangeSyntax}"} :flagenumobject))
 
+(defn secure-pickle-channel
+  [_ args source-stream]
+  (let [message (:message args)
+        encoded-flag (map #(flag/encode % []) (flag/char-to-ascii-map "flag{EverybodyLovesMath}"))
+        encoded (map #(flag/encode % []) (flag/char-to-ascii-map (peek message)))]
+    (-> encoded source-stream)
+    (-> encoded-flag source-stream)
+    (-> source-stream)
+    (-> nil source-stream))
+  #(prn "finished secure pickle"))
+
 (defn streamer-map
   [component]
   (let [queue (:queue component)
@@ -281,6 +293,7 @@
     {:Subscription/LoggedInUsers (online-users queue)
      :Subscription/TheGodlyPickle (super-subscription)
      :Subscription/MessageSub (message-sub messages queue)
+     :Subscription/SecurePickleChannel secure-pickle-channel
      }))
 
 

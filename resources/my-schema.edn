@@ -224,4 +224,9 @@ read curly brackets but sub those in!!"
     :MessageSub
     {:type :Message
      :args
-     {:token {:type (non-null String)}}}}}}}
+     {:token {:type (non-null String)}}}
+
+    :SecurePickleChannel
+    {:type (list (list Int))
+     :args
+     {:message {:type (list (non-null String))}}}}}}}
