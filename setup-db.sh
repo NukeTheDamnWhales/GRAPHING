@@ -45,7 +45,7 @@ create table boards (
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp);
 
-create trigger user_updated_at before update
+create trigger board_updated_at before update
 on boards for each row execute procedure
 maintain_updated_at();
 
@@ -57,7 +57,7 @@ create table members (
   created_at timestamp not null default current_timestamp,
   updated_at timestamp not null default current_timestamp);
 
-create trigger user_updated_at before update
+create trigger member_updated_at before update
 on users for each row execute procedure
 maintain_updated_at();
 
@@ -89,35 +89,47 @@ maintain_updated_at();
 
 
 insert into users (user_id, name, username, accesslevel, password) values
-  (0, 'my name', 'orgenborgen', 'regular', 'abc'),
-  (1, 'louise theroux', 'documentarydude', 'regular', 'abc'),
-  (2, 'another one', 'evenmore!', 'regular', 'abc');
+  (0, 'pickle master', 'picklemaster', 'admin', 'Supergoodpassword!1'),
+  (1, 'pickle disciple', 'pickledisciple', 'regular', 'Supergoodpassword!1'),
+  (2, 'picklepal', 'picklepoisoner!', 'regular', 'Supergoodpassword!1'),
+  (3, 'picklepal', 'GirkenDude', 'regular', 'Supergoodpassword!1'),
+  (4, 'picklepal', 'MerryPickles', 'regular', 'Supergoodpassword!1'),
+  (5, 'picklepal', 'MerryPickles2', 'regular', 'Supergoodpassword!1'),
+  (6, 'picklepal', 'OurLordAndSaviourPickle', 'regular', 'Supergoodpassword!1');
 
 alter table users alter column user_id restart with 10;
 
 insert into boards (board_id, owner, title) values
   (0, 0, 'recipes'),
-  (1, 0, 'pickling tips and tricks');
+  (1, 0, 'pickling tips and tricks'),
+  (2, 0, 'super special pickle discussion'),
+  (3, 1, 'General Pickle Discussion);
 
 alter table boards alter column board_id restart with 10;
 
 insert into members (member_id, board_id, user_id) values
   (0, 0, 0),
   (1, 0, 1),
-  (2, 1, 0);
+  (2, 1, 0),
+  (3, 2, 0),
+  (4, 2, 1),
+  (5, 2, 2);
 
 alter table members alter column member_id restart with 3;
 
 insert into posts (post_id, title, body, user_id, board_id) values
   (0, 'yes', ' This simple refrigerator pickle brine is made with water, vinegar, sugar, sea salt, garlic cloves, and fresh dill. You can adjust the ratios and add other ingredients (such as coriander seeds, peppercorns, or bay leaves) to suit your taste.To cut cucumber spears, simply cut the cuke in half lengthwise and then cut the halves into quarters. If youre happy with the spear size, stop there. If youd like them smaller, cut the spears in half lengthwise again.Of course, this refrigerator dill pickle recipe would also work well with cucumber slices instead of spears.', 0, 0),
-  (1, 'this', 'whats up', 1, 0),
-  (2, 'works', 'whats goin on', 2, 0);
+  (1, 'woohoo!', 'whats up', 1, 0),
+  (2, 'works', 'whats goin on', 2, 0),
+  (3, 'Top Secret Pickle discussion', 'flag{AuthIsReallyHard,LetsJustHideIt}: We have recently updated our message system! SQL was a little complicated for me and as we all know my true love is pickling, not database solutions. I have therefore migrated all of messages over to a brilliant stateful queue! It may be a little slower but I'm sure will serve us well in our collective study of the pickle. I also configured it to send some logs to non-existent users to help with quick troubleshooting. Our superusers can access these by creating a user called logger suffixed with the current minute encoded in our Super Special Pickle Cypher', 0, 2),
+  (4, 'Why is it all so broken', 'I noticed my messages, sometimes don't send until I've sent a couple, whats going on there. I have lots of pertinent poignant pickle points to ponder with pals', 1 3);
 
 alter table posts alter column post_id restart with 10;
 
 insert into comments (comment_id, body, post_id, user_id, parent_id) values
   (0, 'says a lot of things', 0, 0, NULL),
-  (1, 'a feud!', 0, 0, NULL);
+  (1, 'a feud!', 0, 0, NULL),
+  (2, 'Brilliant! Praise be the pickle', 3, 1, NULL);
 
 alter table comments alter column comment_id restart with 10;
 
