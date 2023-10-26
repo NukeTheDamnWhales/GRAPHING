@@ -118,11 +118,11 @@ insert into members (member_id, board_id, user_id) values
 alter table members alter column member_id restart with 3;
 
 insert into posts (post_id, title, body, user_id, board_id) values
-  (0, 'yes', 'This simple refrigerator pickle brine is made with water, vinegar, sugar, sea salt, garlic cloves, and fresh dill. You can adjust the ratios and add other ingredients such as coriander seeds, peppercorns, or bay leaves to suit your taste.To cut cucumber spears, simply cut the cuke in half lengthwise and then cut the halves into quarters. If youre happy with the spear size, stop there. If youd like them smaller, cut the spears in half lengthwise again.Of course, this refrigerator dill pickle recipe would also work well with cucumber slices instead of spears.', 0, 0),
   (1, 'woohoo!', 'whats up', 1, 0),
   (2, 'works', 'whats goin on', 2, 0),
   (3, 'Top Secret Pickle discussion', 'flag{AuthIsReallyHard,LetsJustHideIt}: We have recently updated our message system! SQL was a little complicated for me and as we all know my true love is pickling, not database solutions. I have therefore migrated all of messages over to a brilliant stateful queue! It may be a little slower but I'm sure will serve us well in our collective study of the pickle. I also configured it to send some logs to non-existent users to help with quick troubleshooting. Our superusers can access these by creating a user called logger suffixed with the current minute encoded in our Super Special Pickle Cypher', 0, 2),
-  (4, 'Why is it all so broken', 'I noticed my messages, sometimes don't send until I've sent a couple, whats going on there. I have lots of pertinent poignant pickle points to ponder with pals', 1 3);
+  (4, 'Why is it all so broken', 'I noticed my messages, sometimes don't send until I've sent a couple, whats going on there. I have lots of pertinent poignant pickle points to ponder with pals', 1 3),
+(5, 'yes', 'This simple refrigerator pickle brine is made with water, vinegar, sugar, sea salt, garlic cloves, and fresh dill. You can adjust the ratios and add other ingredients such as coriander seeds, peppercorns, or bay leaves to suit your taste.To cut cucumber spears, simply cut the cuke in half lengthwise and then cut the halves into quarters. If youre happy with the spear size, stop there. If youd like them smaller, cut the spears in half lengthwise again.Of course, this refrigerator dill pickle recipe would also work well with cucumber slices instead of spears.', 0, 0);
 
 alter table posts alter column post_id restart with 10;
 
