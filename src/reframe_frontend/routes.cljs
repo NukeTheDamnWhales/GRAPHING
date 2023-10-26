@@ -19,6 +19,8 @@
 (def routes (branch
               "/"
               (leaf "" :home)
+              (leaf "securepickle" :securepickle)
+              (leaf "messages" :messages)
               (leaf "about" :about)
               (leaf "user" :user)
               (branch "boards"

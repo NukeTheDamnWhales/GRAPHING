@@ -194,18 +194,22 @@
     (let [user-id (-> context :request :token :user-id)
           {:keys [users board]} args
           selected-board-owner (:owner (db/find-board-by-id db board))]
-      (if (= user-id selected-board-owner)
-        (db/add-users-to-board db users board queue)
-        (mapv (fn [x] {:id x :user "could not add"}) users)))))
+      (db/add-users-to-board db users board queue)
+      ;; (if (= user-id selected-board-owner)
+      ;;   (db/add-users-to-board db users board queue)
+      ;;   (mapv (fn [x] {:id x :user "could not add"}) users))
+      )))
 
 (defn send-message
   [messages]
   (fn [context args _]
-    (let [to-send (:messages (:messages messages))]
-      (go (>! to-send {:messages {:user (:user args)
-                                  :message (:message args)
-                                  :from (-> context :request :token :user)}})))
-    "sent"))
+    (let [to-send (:messages (:messages messages))
+          message {:messages {:user (:user args)
+                              :message (:message args)
+                              :from (-> context :request :token :user)}}]
+      (prn message)
+      (go (>! to-send message))
+      (:messages message))))
 
 (defn super-subscription
   []
@@ -253,16 +257,21 @@
                           nil))]
       (when username
         (>!! send-own {:sources {:user username :channel return :token (:token args)}}))
-      (go-loop [{:keys [from message]} (<! return)]
-        (let [to-return {:message message :from from}]
-          (if (nil? from)
+      (go-loop []
+        (let [test (<! return)
+              {:keys [user from message count]} test
+              to-return {:message message :user user :from from :count count}]
+          (prn)
+          (prn "RETURN VALUE" to-return)
+          (prn)
+          (if (nil? message)
             nil
             (do
               (-> to-return source-stream)
-                ;; (if-let [his (:history to-return)]
-                ;;   (-> his source-stream)
-                ;;   (-> (list to-return) source-stream))
-              (recur (<! return))))))
+              ;; (if-let [his (:history to-return)]
+              ;;   (-> his source-stream)
+              ;;   (-> (list to-return) source-stream))
+              (recur)))))
       #(prn "message sub closed")
            ;; (send (-> :queue :user-queue) assoc-in [:users (keyword username)] nil)
       )))
@@ -278,11 +287,16 @@
 (defn secure-pickle-channel
   [_ args source-stream]
   (let [message (:message args)
-        encoded-flag (map #(flag/encode % []) (flag/char-to-ascii-map "flag{EverybodyLovesMath}"))
-        encoded (map #(flag/encode % []) (flag/char-to-ascii-map (peek message)))]
-    (-> encoded source-stream)
-    (-> encoded-flag source-stream)
-    (-> source-stream)
+        encoded-flag (map #(flag/encode % [])
+                          (flag/char-to-ascii-map "flag{EverybodyLovesMath}"))
+        encoded (try (map #(flag/encode % []) (flag/char-to-ascii-map (peek message)))
+                     (catch Exception e
+                       nil))]
+    (if encoded
+      (do (-> encoded source-stream)
+          (-> encoded-flag source-stream)
+          (-> source-stream))
+      (-> "couldnt encode string :(" source-stream))
     (-> nil source-stream))
   #(prn "finished secure pickle"))
 

@@ -54,7 +54,9 @@ read curly brackets but sub those in!!"
   :Message
   {:description "a user message"
    :fields
-   {:from {:type (non-null String)}
+   {:count {:type Int}
+    :user {:type (non-null String)}
+    :from {:type (non-null String)}
     :message {:type (non-null String)}}}
 
   :Board
@@ -204,7 +206,7 @@ read curly brackets but sub those in!!"
      {:id {:type (non-null Int)}}}
 
     :SendMessage
-    {:type String
+    {:type :Message
      :directives [{:directive-type :access
                    :directive-args {:role :regular}}]
      :args

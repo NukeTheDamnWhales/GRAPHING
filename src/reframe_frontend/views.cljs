@@ -23,21 +23,41 @@
                   [:p (str "| Creator: " (-> x :owner :userName) " | Members: "
                            (if (empty? (:members x))
                              "public"
-                             (:members x)))])])
+                             (map :userName (:members x))))])])
              elements)])
 
-
+(defn secure-pickle []
+  (let [secure-pickle-return (re-frame/subscribe [::subs/secure-pickle-return])
+        secure-pickle (re-frame/subscribe [::subs/secure-pickle])]
+    [:div
+     [:a {:on-click (fn [e]
+                      (re-frame/dispatch [::events/clear-pickle]))} "Clear"]
+     [:form {:onSubmit (fn [e]
+                         (.preventDefault e)
+                         (re-frame/dispatch (graphql/SecurePickleChannel @secure-pickle)))}
+      [:input {:type :text
+               :value @secure-pickle
+               :on-change (fn [x]
+                            (re-frame/dispatch
+                             [::events/secure-pickle (-> x .-target .-value)]))}]
+      [:input {:type :submit :value "submit"}]
+      [:p "for those of you familiar with our phenomenal pickling cipher here is a handy tool for quick encoding, along with our INCREDIBLY SECRET holy pickle phrase encoded for easy reference"]
+      [:p (str @secure-pickle-return)]
+      ]]))
 
 (defn home-panel []
   (let [login-or-logout (re-frame/subscribe [::subs/auth-sub])]
     [:div.home-panel
      [:header.home-header "PICKLES"]
-     [:a {:href (routes/url-for :user)} "User"]
+     ;; [:a {:href (routes/url-for :user)} "User"]
      [:a {:href (routes/url-for :boards)} "Boards"]
+     (when @login-or-logout
+       [:a {:href (routes/url-for :messages)} "Messages"])
      [:a {:href (if @login-or-logout
                   (routes/url-for :logout :logout-action "logout")
                   (routes/url-for :auth))}
-      (if @login-or-logout "Logout" "Login")]]))
+      (if @login-or-logout "Logout" "Login")]
+     [:a {:href (routes/url-for :securepickle)} "Secure Pickle Channel"]]))
 ;; about
 
 
@@ -225,21 +245,13 @@
             (map (fn [x] (make-comment-tree-hiccup x id active-reply child-comment logged-in-user)))
             (make-comment-tree comments))
       [:br]
-      ;; (doall (map (fn [x] (let [{:keys [body id user]} x]
-      ;;                       [:header.c-auth {:key id} (str "Author: " (:userName (first user)))
-      ;;                        [:p (str " " body)]
-      ;;                        [:form {:onSubmit (fn [e]
-      ;;                                            (.preventDefault e)
-      ;;                                            (re-frame/dispatch [::events/active-reply id]))}
-      ;;                         [:input.reply {:type :submit :value "Reply"}]]
-      ;;                        (when (= id @active-reply)
-      ;;                          (child-comment id))])) comments))
       ]]))
 
 
 (defn make-datalist-form
   [subs dispatch keyvec]
-  (let [[first-sub data-sub response-sub & rest-sub] subs
+  (let [logged-in-token (re-frame/subscribe [::subs/auth-sub])
+        [first-sub data-sub response-sub & rest-sub] subs
         [submit-event updatef & submit-side-effects] dispatch
         input-eventfun (fn [x y & r]
                          (fn [s]
@@ -247,31 +259,72 @@
         sub1 (re-frame/subscribe [first-sub])
         datasub (re-frame/subscribe [data-sub])
         ressub (re-frame/subscribe [response-sub])
+        auth-reload (re-frame/subscribe [::subs/auth-sub])
         submit-eventf (fn [x]
                         (fn [e]
                           (.preventDefault e)
                           (when (some? submit-side-effects)
-                            (map identity submit-side-effects))
-                          (re-frame/dispatch (submit-event x))))
-        [firstfield secondfield] keyvec]
+                            (map #(re-frame/dispatch [%]) submit-side-effects))
+                          (re-frame/dispatch (submit-event x))
+                          (re-frame/dispatch [::re-graph/unsubscribe {:instance-id :b :id :MessageSub}])
+                          (re-frame/dispatch (graphql/MessageSub (str @auth-reload)))))
+        [firstfield secondfield] keyvec
+        ;; logged-in-user (try (into {}
+        ;;                           (mapv (fn [x] (-> x js/atob (string/replace #":" "") (reader/read-string) walk/keywordize-keys))
+        ;;                                 (pop (string/split @logged-in-token "."))))
+        ;;                     (catch js/Error e
+        ;;                       nil))
+        ]
     (fn []
-      [:div
-       (conj (into [:select {:id "suggestions" :value (firstfield @sub1)
-                             :on-change (input-eventfun updatef firstfield)}]
-                   (mapv (fn [field]
-                           [:option (get (string/split (str field) ":") 1)])
-                         (-> @datasub :LoggedInUsers))))
-       ;; [:input {:autoComplete "on" :list "suggestions" :value (firstfield @sub1)
-       ;;          :on-change (input-eventfun updatef firstfield)}]
+      [:div.messages
+       (when-let [current-sec (get (string/split (firstfield @sub1) ":") 0)]
+         (filter #(and (not
+                        (nil? (:count %)))
+                       (or
+                        (= (:user %) (get (string/split (firstfield @sub1) ":") 0))
+                        (= (:from %) current-sec)))
+                 @ressub)
+         (into [:header.list] (map (fn [x]
+                                     (let [{:keys [message _ from]} x]
+                                       [:p (str from ": " message)])))
+               (let [first-row (filter #(and (not
+                                              (nil? (:count %)))
+                                             (or
+                                              (= (:user %) (get (string/split (firstfield @sub1) ":") 0))
+                                              (= (:from %) current-sec)))
+                                       @ressub)
+                     highest (reduce max (map #(:count %) first-row))
+                     next-row (into [] (filter #(and (nil? (:count %))
+                                                     (or (= (:user %) (get (string/split (firstfield @sub1) ":") 0))
+                                                         (= (:from %) current-sec))))
+                                    @ressub)
+                     stop-point (+ highest (count next-row))]
+                 (sort-by :count
+                          first-row)))
+         ;; (into [:header] (map (fn [x]
+         ;;                        (let [{:keys [message _ from]} x]
+         ;;                          (prn "hi!" logged-in-user)
+         ;;                          [:p (str from ": " message)])))
+         ;;       (filter #(and (nil? (:count %))
+         ;;                     (or (= (:user %) (get (string/split (firstfield @sub1) ":") 0))
+         ;;                         (= (:from %) current-sec)))
+         ;;               @ressub))
+         )
+       (into [:select {:id "suggestions" :value (if (firstfield @sub1)
+                                                  (firstfield @sub1)
+                                                  "")
+                       :on-change (input-eventfun updatef firstfield)}]
+             (mapv (fn [field]
+                     [:option (get (string/split (str field) ":") 1)])
+                   (-> @datasub :LoggedInUsers)))
+         ;; [:input {:autoComplete "on" :list "suggestions" :value (firstfield @sub1)
+         ;;          :on-change (input-eventfun updatef firstfield)}]
        [:form
         {:onSubmit (submit-eventf (mapv (fn [x] (x @sub1)) keyvec))}
         [:input {:type :text
                  :value (secondfield @sub1)
                  :on-change (input-eventfun updatef secondfield)}]
-        [:input {:type :submit :value "send"}]]
-       (when-let [messages @ressub]
-         (into [:header] (map (fn [x] (prn x)
-                                [:a (str x)])) messages))])))
+        [:input {:type :submit :value "send"}]]])))
 
 
 
@@ -301,11 +354,11 @@
   (fn []
     (let [users (re-frame/subscribe [::subs/logged-in-users])
           user-list (:LoggedInUsers @users)]
-        ;; (nil? @online)
-        ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
+      ;; (nil? @online)
+      ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
 
-        ;; (re-frame/dispatch graphql/OnlineUsers)
-        ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
+      ;; (re-frame/dispatch graphql/OnlineUsers)
+      ;; (re-frame/dispatch [::re-graph/unsubscribe {:id :logged-in-users}])
       [:header.logged-in "currently online:" [:div (str user-list)]])))
 
 ;; main
@@ -325,7 +378,11 @@
     :create-user-panel [(make-input-form [::subs/create-user-form]
                          [graphql/CreateUser ::events/create-user]
                          [:user :password])]
+    :messages-panel [(make-datalist-form [::subs/send-message ::subs/logged-in-users ::subs/receive-message]
+                            [graphql/SendMessage ::events/send-message]
+                            [:user :body])]
     :user-panel [user-panel]
+    :securepickle-panel [secure-pickle]
     [:div "You are horribly horribly lost 🥲"]))
 
 
@@ -349,7 +406,6 @@
           auth-reload (re-frame/subscribe [::subs/auth-sub])]
       ;; Reload auth key on all changes to auth db (stored in localstorage)
       (re-frame/dispatch [::events/reload-auth])
-      (re-frame/dispatch (graphql/SecurePickleChannel "hi"))
       (re-frame/dispatch [::re-graph/re-init {:instance-id :a
                                               :http {:impl (if @auth-reload
                                                              {:headers {"Authorization" @auth-reload}}
@@ -364,6 +420,4 @@
        [show-panel @active-panel]
        [users-online]
        ;; [messages]
-       [(make-datalist-form [::subs/send-message ::subs/logged-in-users ::subs/receive-message]
-                            [graphql/SendMessage ::events/send-message]
-                            [:user :body])]])))
+])))

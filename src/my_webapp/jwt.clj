@@ -58,11 +58,7 @@
                                      nil))]
                  ;; (send-off (:user-queue (:queue queue)) assoc-in [:users (keyword (:user token))] assoc unsign)
                  (assoc-in context [:request :token] token)
-                 context)))
-    :leave (fn [context]
-             (prn "we are here hopefully???")
-             (prn "yessir")
-             context)}))
+                 context)))}))
 
 (def auth-interceptor
   (interceptor

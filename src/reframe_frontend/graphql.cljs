@@ -55,14 +55,14 @@
     :id :SecurePickleChannel
     :query "($message: String) {SecurePickleChannel(message: $message)}"
     :variables {:message x}
-    :callback [::events/do-nothing]}])
+    :callback [::events/secure-pickle-return]}])
 
 (defn MessageSub
   [x]
   [::re-graph/subscribe
    {:instance-id :b
     :id :MessageSub
-    :query "($token: String){MessageSub(token: $token) {message from}}"
+    :query "($token: String){MessageSub(token: $token) {message from count user}}"
     :variables {:token x}
     :callback [::events/receive-message]}])
 
@@ -71,7 +71,7 @@
   [::re-graph/mutate
    {:instance-id :a
     :id :SendMessage
-    :query "($user: String $body: String) {SendMessage(user: $user message: $body)}"
+    :query "($user: String $body: String) {SendMessage(user: $user message: $body) {user from message}}"
     :variables {:user x :body y}
     :callback [::events/do-nothing]}])
 

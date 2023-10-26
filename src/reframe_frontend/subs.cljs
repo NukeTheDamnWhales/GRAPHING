@@ -84,5 +84,20 @@
 
 (re-frame/reg-sub
  ::create-board
- (fn [db ]
+ (fn [db _]
    (:create-board db)))
+
+(re-frame/reg-sub
+ ::toggle-messages
+ (fn [db _]
+   (:toggle-messages db)))
+
+(re-frame/reg-sub
+ ::secure-pickle-return
+ (fn [db _]
+   (:secure-pickle-return db)))
+
+(re-frame/reg-sub
+ ::secure-pickle
+ (fn [db _]
+   (:secure-pickle db)))

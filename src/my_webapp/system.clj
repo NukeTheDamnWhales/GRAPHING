@@ -4,7 +4,8 @@
             [my-webapp.server :as server]
             [my-webapp.db :as db]
             [my-webapp.queue :as us]
-            [my-webapp.messages :as ms]))
+            [my-webapp.messages :as ms]
+            [my-webapp.userflag :as uf]))
 
 (defn new-system
   []
@@ -13,6 +14,9 @@
          :messages (component/using
                     (ms/map->UserMessages {})
                     [:queue])
+         :userflag (component/using
+                    (uf/map->UserFlag {})
+                    [:messages])
          :db (component/using
               (db/map->MyWebappDb {})
               [:queue])

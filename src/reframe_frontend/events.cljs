@@ -61,8 +61,8 @@
                                                              (pop (string/split authorization "."))))
                                                  (catch js/Error e
                                                    nil))))
-       ;; (.clear (.-localStorage js/window))
-       db
+       (do (.clear (.-localStorage js/window))
+           db)
        (assoc db :authorization authorization)))))
 
 (re-frame/reg-event-db
@@ -144,12 +144,36 @@
 (re-frame/reg-event-db
  ::receive-message
  (fn [db [_ x]]
-   (let [mes (-> x :response :data :MessageSub)]
+   (if-let [mes (-> x :response :data :MessageSub)]
      (if mes
        (update-in db [:receive-message] conj mes)
-       db))))
+       db)
+     (let [mes (-> x :response :data :SendMessage)]
+       (if mes
+         (update-in db [:receive-message] conj mes)
+         db)))))
 
 (re-frame/reg-event-db
  ::clear-messages
  (fn [db]
    (dissoc db :receive-message)))
+
+(re-frame/reg-event-db
+ ::toggle-messages
+ (fn [db [_ x]]
+   (assoc db :toggle-messages x)))
+
+(re-frame/reg-event-db
+ ::secure-pickle-return
+ (fn [db [_ x]]
+   (update-in db [:secure-pickle-return] conj "  new message starts here ->  " (-> x :response :data :SecurePickleChannel))))
+
+(re-frame/reg-event-db
+ ::secure-pickle
+ (fn [db [_ x]]
+   (assoc db :secure-pickle x)))
+
+(re-frame/reg-event-db
+ ::clear-pickle
+ (fn [db]
+   (assoc db :secure-pickle-return nil)))
