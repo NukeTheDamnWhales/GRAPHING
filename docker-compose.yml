@@ -1,5 +1,4 @@
 version: '3'
-network_mode: "host"
 services:
   db:
     ports:
@@ -12,6 +11,7 @@ services:
     # command: bash -c "~/setup-db.sh"
 
   proxy:
+    network_mode: "host"
     build: ./
     ports:
       - 80:80
