@@ -36,8 +36,13 @@
 
 (defn post-by-id
   [db]
-  (fn [_ args _]
-    (db/find-post-by-id db (:id args))))
+  (fn [context args _]
+    (let [user (-> context :request :token :user-id)
+          board-members (mapv #(:id %) (db/find-user-by-board db board))
+          owner (:owner (db/find-board-by-id db board))]
+        (if (or (some #{user} board-members) (empty? board-members) (= user owner))
+          (db/find-post-by-id db (:id args))
+          "error"))))
 
 (defn comment-by-id
   [db]
