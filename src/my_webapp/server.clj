@@ -12,7 +12,7 @@
 (def ^:private default-api-path "/api")
 (def ^:private default-asset-path "/assets/graphiql")
 (def ^:private default-subscriptions-path "/ws")
-(def ^:private default-host-address "localhost")
+(def ^:private default-host-address "127.0.0.1")
 
 
 (defn default-interceptors

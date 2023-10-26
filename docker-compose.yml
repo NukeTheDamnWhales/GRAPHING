@@ -11,14 +11,7 @@ services:
     # command: bash -c "~/setup-db.sh"
 
   proxy:
-    build: ./
+    build: ./nginx-proxy/
     ports:
       - 80:80
       - 443:443
-
-  backend:
-    build: ./src/
-    links:
-      - "db:database"
-    ports:
-      - 8888:8888
