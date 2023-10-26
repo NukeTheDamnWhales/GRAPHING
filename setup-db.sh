@@ -127,11 +127,4 @@ insert into posts (post_id, title, body, user_id, board_id) values
 
 alter table posts alter column post_id restart with 10;
 
-# insert into comments (comment_id, body, post_id, user_id, parent_id) values
-#   (0, 'says a lot of things', 0, 0, NULL),
-#   (1, 'a feud!', 0, 0, NULL),
-#   (2, 'Brilliant! Praise be the pickle', 3, 1, NULL);
-
-# alter table comments alter column comment_id restart with 10;
-
 __END
