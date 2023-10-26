@@ -108,10 +108,7 @@ alter table boards alter column board_id restart with 10;
 insert into members (member_id, board_id, user_id) values
   (0, 0, 0),
   (1, 0, 1),
-  (2, 1, 0),
-  (3, 2, 0),
-  (4, 2, 1),
-  (5, 2, 2);
+  (2, 1, 0);
 
 alter table members alter column member_id restart with 3;
 
