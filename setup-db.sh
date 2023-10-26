@@ -7,7 +7,7 @@ create user my_role password 'lacinia';
 grant create on schema public to my_role;
 __END
 
-docker exec -i my-webapp_db_1 psql -Umy_role mydb -a <<__END
+docker exec -i graphing_db_1 psql -Umy_role mydb -a <<__END
 drop table if exists user_to_token;
 drop table if exists members;
 drop table if exists users;
