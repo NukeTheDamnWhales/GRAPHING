@@ -36,15 +36,14 @@
   (interceptor
    {:name ::introspection-inter
     :enter (fn [context]
-             (let [{:keys [id response-data-ch body]} (:request context)]
-               (when (not-empty
-                    (re-seq
-                     #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
-                     body))
-                 (put! response-data-ch {:type :flag
-                                         :id id
-                                         :payload "on the right track"})))
-             context)}))
+             (if (not-empty
+                  (re-seq
+                   #"(?i)(__Schema|__typeName|__Type|__TypeKing|__Field|__InputValue|__EnumValue|__Directive)"
+                   (-> context :request :body)))
+               (assoc context :response
+                      (internal/failure-response
+                         (internal/message-as-errors "No Introspection !!! I mean it >:( ")))
+               context))}))
 
 
 (defn token-interceptor
