@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-docker exec -i --user postgres my-webapp_db_1 createdb mydb
+docker exec -i --user postgres graphing_db_1 createdb mydb
 
-docker exec -i --user postgres my-webapp_db_1 psql mydb -a <<__END
+docker exec -i --user postgres graphing_db_1 psql mydb -a <<__END
 create user my_role password 'lacinia';
 grant create on schema public to my_role;
 __END
