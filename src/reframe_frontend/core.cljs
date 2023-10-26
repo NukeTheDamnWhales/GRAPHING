@@ -11,8 +11,8 @@
 
 ;; replacing host dynamically, need config option
 
-(def host {:http "http://localhost/api"
-           :ws "ws://localhost/ws"})
+(def host {:http "http://127.0.0.1/api"
+           :ws "ws://127.0.0.1/ws"})
 
 
 (re-frame/reg-sub

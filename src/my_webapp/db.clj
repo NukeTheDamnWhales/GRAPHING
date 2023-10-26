@@ -216,7 +216,7 @@
   component/Lifecycle
 
   (start [this]
-    (assoc this :datasource (pooled-data-source "localhost" "mydb" "my_role" "lacinia" 25432)))
+    (assoc this :datasource (pooled-data-source "database" "mydb" "my_role" "lacinia" 25432)))
 
   (stop [this]
     (<!! (:using (:queue queue)))
