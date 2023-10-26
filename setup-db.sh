@@ -118,7 +118,7 @@ insert into members (member_id, board_id, user_id) values
 alter table members alter column member_id restart with 3;
 
 insert into posts (post_id, title, body, user_id, board_id) values
-  (0, 'what', 'what', 1 0),
+  (0, 'what', 'is up', 1 0),
   (1, 'woohoo!', 'whats up', 1, 0),
   (2, 'works', 'whats goin on', 2, 0),
   (4, 'Why is it all so broken', 'I noticed my messages, sometimes don't send until I've sent a couple, whats going on there. I have lots of pertinent poignant pickle points to ponder with pals', 1 3),
