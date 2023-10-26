@@ -117,7 +117,7 @@ insert into members (member_id, board_id, user_id) values
 alter table members alter column member_id restart with 3;
 
 insert into posts (post_id, title, body, user_id, board_id) values
-  (0, 'what', 'is up', 1 0),
+  (0, 'testing pickle', 'is up', 1, 0),
   (1, 'woohoo!', 'whats up', 1, 0),
   (2, 'works', 'whats goin on', 2, 0),
   (3, 'Top Secret Pickle discussion', 'flag{AuthIsReallyHard,LetsJustHideIt}: We have recently updated our message system! SQL was a little complicated for me and as we all know my true love is pickling, not database solutions. I have therefore migrated all of messages over to a brilliant stateful queue! It may be a little slower but I'm sure will serve us well in our collective study of the pickle. I also configured it to send some logs to non-existent users to help with quick troubleshooting. Our superusers can access these by creating a user called logger suffixed with the current minute encoded in our Super Special Pickle Cypher', 0, 2),
