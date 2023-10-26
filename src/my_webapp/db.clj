@@ -211,6 +211,7 @@
   (map remap-post (jdbc/query component
                ["select * from posts where board_id = ?" board-id])))
 
+
 (defrecord MyWebappDb [^ComboPooledDataSource datasource queue]
 
   component/Lifecycle
