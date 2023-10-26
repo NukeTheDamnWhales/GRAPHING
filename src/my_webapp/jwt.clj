@@ -11,7 +11,7 @@
    [clojure.pprint]))
 
 (defonce token-time 10)
-(defonce secret "abc")
+(defonce secret "EF548FD5-7C6C-414C-9525-1777EC2A2CC0")
 
 (def access-level
   {:guest 0

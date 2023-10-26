@@ -19,17 +19,14 @@
   [db]
   (fn [context args _]
     ;; (prn (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")))
-    (db/find-user-by-username db (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")))))
+    (db/find-user-by-username db (:user (-> context :request :token)))))
 
 (defn user-by-token
   [db]
   (fn [context _ _]
-    (let [auth (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
-                    (catch Exception e
-                      "error"))
-          username (:user auth)]
-      (if username
-        (schema/tag-with-type (db/find-user-by-username db username) :User)
+    (let [auth (-> context :request :token :user)]
+      (if auth
+        (schema/tag-with-type (db/find-user-by-username db auth) :User)
         (schema/tag-with-type {:message "error"} :NotFoundAcceptableNull)))))
 
 (defn user-by-id
@@ -119,7 +116,7 @@
 (defn refresh-token
   [db queue]
   (fn [context _ _]
-    (try (auth/create-claim (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc"))
+    (try (auth/create-claim (:user (jwt/unsign (get-in (:request context) [:headers "authorization"]) auth/secret))
                         db queue)
          (catch Exception e
            "error"))))
@@ -151,7 +148,7 @@
 (defn create-comment
   [db]
   (fn [context args _]
-    (let [{id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+    (let [{id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) auth/secret)
                           (catch Exception e
                             {:user-id nil}))
           {:keys [body post parent]} args]
@@ -162,7 +159,7 @@
 (defn delete-comment
   [db]
   (fn [context args _]
-    (let [{user-id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) "abc")
+    (let [{user-id :user-id} (try (jwt/unsign (get-in (:request context) [:headers "authorization"]) auth/secret)
                                   (catch Exception e
                                     {:user-id nil}))
           {:keys [id]} args]
@@ -252,7 +249,7 @@
     (let [send-own (:sources (:messages messages))
           return (chan 1)
           ;; not huge on this :/
-          username (try (:user (jwt/unsign (:token args) "abc"))
+          username (try (:user (jwt/unsign (:token args) auth/secret))
                         (catch Exception e
                           nil))]
       (when username
