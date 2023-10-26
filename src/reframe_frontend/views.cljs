@@ -123,7 +123,7 @@
                           (when (some? submit-side-effects)
                             (re-frame/dispatch (first submit-side-effects)))))]
     (fn []
-      [:div "CREATE A NEW USER"
+      [:div
        (conj
         (into [:form
                {:onSubmit (submit-eventf (if (= 1 (count keyvec))
@@ -375,12 +375,13 @@
     :auth-panel [login-panel]
     :logout-panel [about-panel]
     :create-post-panel [create-post-panel]
-    :create-user-panel [(make-input-form [::subs/create-user-form]
-                         [graphql/CreateUser ::events/create-user]
-                         [:user :password])]
+    :create-user-panel [:header "MAKE A USER"
+                        [(make-input-form [::subs/create-user-form]
+                                          [graphql/CreateUser ::events/create-user]
+                                          [:user :password])]]
     :messages-panel [(make-datalist-form [::subs/send-message ::subs/logged-in-users ::subs/receive-message]
-                            [graphql/SendMessage ::events/send-message]
-                            [:user :body])]
+                                         [graphql/SendMessage ::events/send-message]
+                                         [:user :body])]
     :user-panel [user-panel]
     :securepickle-panel [secure-pickle]
     [:div "You are horribly horribly lost 🥲"]))
