@@ -56,6 +56,7 @@
   [row-data]
   (set/rename-keys row-data {:board_id :id
                              :user_id :user_id
+                             :owner :owner
                              :title :title}))
 
 (defn create-user
