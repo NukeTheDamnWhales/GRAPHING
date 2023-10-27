@@ -44,7 +44,7 @@
           owner (:owner (db/find-board-by-id db board))]
       (if (or (some #{user} board-members) (empty? board-members) (= user owner))
         ;; post
-        (prn (some #{user} board-members) (empty? board-members) (= user owner))
+        post
         "error"))))
 
 (defn comment-by-id
