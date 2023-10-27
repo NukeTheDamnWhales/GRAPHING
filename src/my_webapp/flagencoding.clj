@@ -29,6 +29,22 @@
   [x]
   (reduce str (mapv #(char %) x)))
 
+(defn permutation-of-encode
+  [z]
+  (let
+      [x (into [] (map identity z))]
+      (loop [perm (into [] (range 0 (count x)))
+             y []]
+        (prn perm)
+        (if (= (count x) (count y))
+          y
+          (recur (into [] (remove #(= % (get perm (get x (count y))))) perm)
+                 (conj y (get perm (get x (count y)))))))))
+
+(mapv permutation-of-encode (mapv #(encode % []) (char-to-ascii-map "regular")))
+
 (ascii-map-to-string (char-to-ascii-map "regular"))
 
 (map #(decode % 0) (mapv #(encode % []) (char-to-ascii-map "regular")))
+
+(into [] (map identity) (list 1 23))

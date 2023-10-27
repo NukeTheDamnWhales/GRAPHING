@@ -124,10 +124,9 @@
 (defn find-post-by-id
   [component post-id]
   (-> (jdbc/query component
-                  ["select post_id, title, body, user_id, board_id created_at, updated_at from posts where post_id = ?" post-id])
+                  ["select * from posts where post_id = ?" post-id])
       first
-      remap-post
-      ))
+      remap-post))
 
 (defn find-board-by-id
   [component board-id]

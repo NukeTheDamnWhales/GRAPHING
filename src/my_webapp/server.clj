@@ -91,8 +91,8 @@
          ::http/type :jetty
          ::http/join? false}
         lp/enable-graphiql
-        (lp/enable-subscriptions compiled-schema options
-                                 ;; {:subscription-interceptors subscription-interceptors}
+        (lp/enable-subscriptions compiled-schema ;; options
+                                 {:subscription-interceptors subscription-interceptors}
                                  ))))
 
 (defrecord Server [schema-provider server queue]

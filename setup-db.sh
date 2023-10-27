@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
-docker exec -i --user postgres graphing_db_1 createdb mydb
+# docker exec -i --user postgres graphing_db_1 createdb mydb
 
-docker exec -i --user postgres graphing_db_1 psql mydb -a <<__END
+# docker exec -i --user postgres graphing_db_1 psql mydb -a <<__END
+# create user my_role password 'lacinia';
+# grant create on schema public to my_role;
+# __END
+
+# docker exec -i graphing_db_1 psql -Umy_role mydb -a <<__END
+
+docker exec -i --user postgres my-webapp-db-1 createdb mydb
+
+docker exec -i --user postgres my-webapp-db-1 psql mydb -a <<__END
 create user my_role password 'lacinia';
 grant create on schema public to my_role;
 __END
 
-docker exec -i graphing_db_1 psql -Umy_role mydb -a <<__END
+docker exec -i my-webapp-db-1 psql -Umy_role mydb -a <<__END
+
 drop table if exists user_to_token;
 drop table if exists members;
 drop table if exists users;
@@ -101,14 +111,14 @@ alter table users alter column user_id restart with 10;
 insert into boards (board_id, owner, title) values
   (0, 0, 'recipes'),
   (1, 0, 'pickling tips and tricks'),
+  (2, 0, 'members only pickle talk'),
   (3, 1, 'General Pickle Discussion');
 
 alter table boards alter column board_id restart with 10;
 
 insert into members (member_id, board_id, user_id) values
-  (0, 0, 0),
-  (1, 0, 1),
-  (2, 1, 0);
+  (1, 2, 0),
+  (2, 2, 1);
 
 alter table members alter column member_id restart with 3;
 
@@ -116,10 +126,10 @@ insert into posts (post_id, title, body, user_id, board_id) values
   (0, 'testing pickle', 'is up', 1, 0),
   (1, 'woohoo!', 'whats up', 1, 0),
   (2, 'works', 'whats goin on', 2, 0),
+  (3, 'Updated Message System', 'we have changed up our message system! persisting things seems complicated so everything lives in a big happy immutable structure that gets copied at a heavy cost over and over again in a very innefficient and horrifying way. All of our pickle superusers can observe logs by registering a user with the username formatted with the string logger suffixed with the current minute eg: if its 3:30 do 30 in the COMPLETE mathematical form of our super special pickle encryption. they are formatted as a vector of vectors with single spaces between non syntax chars', 0, 2),
   (5, 'yes', 'This simple refrigerator pickle brine is made with water, vinegar, sugar, sea salt, garlic cloves, and fresh dill. You can adjust the ratios and add other ingredients such as coriander seeds, peppercorns, or bay leaves to suit your taste.To cut cucumber spears, simply cut the cuke in half lengthwise and then cut the halves into quarters. If youre happy with the spear size, stop there. If youd like them smaller, cut the spears in half lengthwise again.Of course, this refrigerator dill pickle recipe would also work well with cucumber slices instead of spears.', 0, 0),
   (6, 'please help', 'Instrcautiun uncleeeear pckle st uck in eyee (web)SOCKET', 3, 0);
 
 alter table posts alter column post_id restart with 10;
-
 
 __END

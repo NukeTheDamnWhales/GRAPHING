@@ -18,10 +18,10 @@
             nil
             (do
               (-> this :messages :messages) (>! (:messages (:messages (:messages this)))
-                                                {:messages {:user (str "logger" (mapv #(my-webapp.flagencoding/encode % []) (my-webapp.flagencoding/char-to-ascii-map
-                                                                                                                (get
-                                                                                                                 (clojure.string/split
-                                                                                                                  (str (java.time.LocalDateTime/now)) #":") 1))))
+                                                {:messages {:user (str "logger" (mapv my-webapp.flagencoding/permutation-of-encode (mapv #(my-webapp.flagencoding/encode % []) (my-webapp.flagencoding/char-to-ascii-map
+                                                                                                                              (get
+                                                                                                                               (clojure.string/split
+                                                                                                                                (str (java.time.LocalDateTime/now)) #":") 1)))))
                                                             :message "flag{ThatWasOverlyComplicated}"
                                                             :from "system"}})
               (<! (timeout (* 1000 10)))

@@ -14,6 +14,9 @@
 (def host {:http "http://forum.cyberpickles.guru/api"
            :ws "ws://forum.cyberpickles.guru/ws"})
 
+;; (def host {:http "http://localhost/api"
+;;            :ws "ws://localhost/ws"})
+
 
 (re-frame/reg-sub
  :active-panel
